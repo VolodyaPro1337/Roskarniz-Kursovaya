@@ -1,33 +1,70 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, reactive, computed, watch } from 'vue';
 import Navigation from '@/Components/Navigation.vue';
 import CustomCursor from '@/Components/CustomCursor.vue';
+import gsap from 'gsap';
 
 // --- State ---
-const showQuiz = ref(true); // Показывать ли квиз при входе
+const showQuiz = ref(true); 
 const currentStep = ref(0);
 
-// --- Quiz Logic ---
+// --- Filters State ---
+const filters = reactive({
+    search: '',
+    category: 'all',
+    priceRange: [0, 50000],
+    opacity: [] as string[],
+    room: [] as string[],
+    color: [] as string[],
+    material: [] as string[]
+});
+
+// --- Quiz Logic (Functional) ---
 const quizQuestions = [
     {
-        question: "Для какой комнаты ищете шторы?",
-        options: ["Спальня", "Гостиная", "Кухня", "Детская", "Офис/Кабинет"]
+        key: 'room',
+        question: "Куда подбираем шторы?",
+        options: [
+            { label: "Спальня", value: "bedroom", icon: "🛏️" },
+            { label: "Гостиная", value: "living", icon: "🛋️" },
+            { label: "Кухня", value: "kitchen", icon: "🍳" },
+            { label: "Детская", value: "kids", icon: "🧸" }
+        ]
     },
     {
-        question: "Важна ли полная темнота (Blackout)?",
-        options: ["Да, полная темнота", "Нет, нужен рассеянный свет", "Не принципиально"]
+        key: 'opacity',
+        question: "Насколько важна темнота?",
+        options: [
+            { label: "Полный мрак (Blackout)", value: "blackout", icon: "🌑" },
+            { label: "Сильное затемнение (Dimout)", value: "dimout", icon: "🌘" },
+            { label: "Мягкий свет", value: "light", icon: "🌥️" },
+            { label: "Прозрачный тюль", value: "sheer", icon: "☀️" }
+        ]
     },
     {
-        question: "Какой стиль интерьера?",
-        options: ["Минимализм", "Классика", "Лофт", "Скандинавский", "Хай-тек"]
+        key: 'style', // Just for preference, maybe implies Material/Color later
+        question: "Предпочтительный стиль?",
+        options: [
+            { label: "Минимализм", value: "minimal", icon: "⬜" },
+            { label: "Современный", value: "modern", icon: "🏙️" },
+            { label: "Классика", value: "classic", icon: "🏛️" },
+            { label: "Лофт", value: "loft", icon: "🧱" }
+        ]
     }
 ];
 
-const answers = ref<string[]>([]);
-
-const selectOption = (option: string) => {
-    answers.value[currentStep.value] = option;
+const selectQuizOption = (questionIndex: number, value: string) => {
+    const question = quizQuestions[questionIndex];
+    
+    // Auto-apply filter
+    if (question.key === 'room') {
+        if (!filters.room.includes(value)) filters.room.push(value);
+    } else if (question.key === 'opacity') {
+        if (!filters.opacity.includes(value)) filters.opacity.push(value);
+    }
+    
+    // Next Step
     if (currentStep.value < quizQuestions.length - 1) {
         currentStep.value++;
     } else {
@@ -36,37 +73,63 @@ const selectOption = (option: string) => {
 };
 
 const finishQuiz = () => {
-    // Здесь будет логика фильтрации на основе ответов
-    console.log("Answers:", answers.value);
-    showQuiz.value = false;
+    // Animate out
+    gsap.to('.quiz-overlay', { opacity: 0, duration: 0.5, onComplete: () => showQuiz.value = false });
 };
 
 const skipQuiz = () => {
-    showQuiz.value = false;
+    gsap.to('.quiz-overlay', { opacity: 0, duration: 0.5, onComplete: () => showQuiz.value = false });
 };
 
-// --- Catalog Data (Mock) ---
+// --- Mock Data ---
 const categories = [
-    { id: 'all', name: 'Все товары', icon: 'Squares2X2Icon' },
-    { id: 'curtains', name: 'Шторы', icon: 'CurtainIcon' },
-    { id: 'cornices', name: 'Карнизы', icon: 'Bars3Icon' },
-    { id: 'fabrics', name: 'Ткани', icon: 'SwatchIcon' },
-    { id: 'accessories', name: 'Аксессуары', icon: 'TagIcon' },
+    { id: 'all', name: 'Все категории' },
+    { id: 'curtains', name: 'Портьеры' },
+    { id: 'tulle', name: 'Тюль' },
+    { id: 'roman', name: 'Римские' },
+    { id: 'electro', name: 'Электрокарнизы' },
 ];
 
-const activeCategory = ref('all');
+const filterOptions = {
+    opacity: [
+        { id: 'blackout', name: 'Blackout (100%)' },
+        { id: 'dimout', name: 'Dimout (70-90%)' },
+        { id: 'light', name: 'Светопроницаемые' },
+    ],
+    room: [
+        { id: 'bedroom', name: 'Спальня' },
+        { id: 'living', name: 'Гостиная' },
+        { id: 'kitchen', name: 'Кухня' },
+        { id: 'kids', name: 'Детская' },
+    ],
+    color: [
+        { id: 'beige', name: 'Бежевый', hex: '#d6d3d1' },
+        { id: 'grey', name: 'Серый', hex: '#52525b' },
+        { id: 'black', name: 'Черный', hex: '#18181b' },
+        { id: 'white', name: 'Белый', hex: '#ffffff' },
+        { id: 'blue', name: 'Синий', hex: '#1e3a8a' },
+    ]
+};
 
 const products = ref([
-    { id: 1, name: 'Blackout Eclipse', price: '15 000 ₽', image: '/images/product-1.jpg', category: 'curtains' },
-    { id: 2, name: 'Soft Linen Beige', price: '12 000 ₽', image: '/images/product-2.jpg', category: 'curtains' },
-    { id: 3, name: 'Smart Motor Somfy', price: '25 000 ₽', image: '/images/product-motor.jpg', category: 'cornices' },
-    { id: 4, name: 'Velvet Royal Red', price: '18 500 ₽', image: '/images/product-3.jpg', category: 'curtains' },
-    { id: 5, name: 'Sheer Silk White', price: '8 000 ₽', image: '/images/product-4.jpg', category: 'fabrics' },
-    { id: 6, name: 'Aluminum Track', price: '4 500 ₽', image: '/images/product-track.jpg', category: 'cornices' },
-    { id: 7, name: 'Blackout Eclipse', price: '15 000 ₽', image: '/images/product-1.jpg', category: 'curtains' }, // Duplicate for grid demo
-    { id: 8, name: 'Soft Linen Beige', price: '12 000 ₽', image: '/images/product-2.jpg', category: 'curtains' },
+    { id: 1, name: 'Moonlight Silence', price: '15 900 ₽', category: 'curtains', opacity: 'blackout', room: 'bedroom', image: '/images/product-1.jpg' },
+    { id: 2, name: 'Morning Breeze', price: '8 500 ₽', category: 'tulle', opacity: 'sheer', room: 'living', image: '/images/product-2.jpg' },
+    { id: 3, name: 'Somfy Glydea Ultra', price: '28 000 ₽', category: 'electro', opacity: 'n/a', room: 'living', image: '/images/product-motor.jpg' },
+    { id: 4, name: 'Velvet Touch', price: '22 000 ₽', category: 'curtains', opacity: 'dimout', room: 'living', image: '/images/product-3.jpg' },
+    { id: 5, name: 'Linen Eco', price: '12 400 ₽', category: 'curtains', opacity: 'light', room: 'kitchen', image: '/images/product-4.jpg' },
+    { id: 6, name: 'Kids Dream', price: '9 900 ₽', category: 'curtains', opacity: 'dimout', room: 'kids', image: '/images/product-1.jpg' },
 ]);
 
+// Computed Filtered Products
+const filteredProducts = computed(() => {
+    return products.value.filter(p => {
+        if (filters.category !== 'all' && p.category !== filters.category) return false;
+        if (filters.opacity.length && !filters.opacity.includes(p.opacity)) return false;
+        if (filters.room.length && !filters.room.includes(p.room)) return false;
+        // Search logic placeholder
+        return true;
+    });
+});
 </script>
 
 <template>
@@ -74,185 +137,210 @@ const products = ref([
     <Navigation />
     <CustomCursor />
 
-    <div class="min-h-screen bg-[#0f0f11] text-white selection:bg-white selection:text-black overflow-x-hidden pt-20">
+    <div class="min-h-screen bg-[#050505] text-white selection:bg-white selection:text-black overflow-x-hidden pt-24 font-sans">
         
         <!-- QUIZ OVERLAY -->
-        <transition name="fade">
-            <div v-if="showQuiz" class="fixed inset-0 z-40 bg-black/95 backdrop-blur-xl flex items-center justify-center p-4">
-                <div class="max-w-2xl w-full text-center">
-                    <!-- Progress -->
-                    <div class="flex justify-center gap-2 mb-12">
-                        <div 
-                            v-for="(q, index) in quizQuestions" 
-                            :key="index"
-                            class="h-1 w-16 rounded-full transition-all duration-500"
-                            :class="index <= currentStep ? 'bg-white' : 'bg-white/20'"
-                        ></div>
-                    </div>
+        <div v-if="showQuiz" class="quiz-overlay fixed inset-0 z-[60] bg-black flex items-center justify-center p-4">
+            <!-- Background effects -->
+            <div class="absolute inset-0 overflow-hidden pointer-events-none">
+                <div class="absolute top-0 left-1/4 w-[500px] h-[500px] bg-white/5 rounded-full blur-[120px]"></div>
+                <div class="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-white/5 rounded-full blur-[120px]"></div>
+                <!-- Noise -->
+                <div class="absolute inset-0 bg-[url('/images/noise.png')] opacity-10 mix-blend-overlay"></div>
+            </div>
 
-                    <!-- Question -->
-                    <h2 class="text-4xl md:text-5xl font-bold mb-12 tracking-tight">
+            <div class="max-w-4xl w-full relative z-10">
+                <!-- Progress -->
+                <div class="flex items-center gap-4 mb-16">
+                    <span class="text-xs font-mono text-gray-500">STEP 0{{ currentStep + 1 }}</span>
+                    <div class="flex-1 h-[1px] bg-white/10 relative">
+                         <div class="absolute left-0 top-0 h-full bg-white transition-all duration-500" :style="{ width: ((currentStep + 1) / quizQuestions.length) * 100 + '%' }"></div>
+                    </div>
+                    <span class="text-xs font-mono text-gray-500">03</span>
+                </div>
+
+                <!-- Content -->
+                <div class="space-y-12">
+                     <h2 class="text-5xl md:text-7xl font-bold tracking-tighter leading-none">
                         {{ quizQuestions[currentStep].question }}
                     </h2>
 
-                    <!-- Options -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-12">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <button 
                             v-for="option in quizQuestions[currentStep].options" 
-                            :key="option"
-                            @click="selectOption(option)"
-                            class="p-6 rounded-2xl border border-white/10 hover:bg-white hover:text-black transition-all duration-300 text-lg font-medium group text-left flex justify-between items-center cursor-hover"
+                            :key="option.value"
+                            @click="selectQuizOption(currentStep, option.value)"
+                            class="group relative h-48 rounded-2xl border border-white/10 hover:border-white transition-all duration-300 p-6 flex flex-col justify-between items-start text-left bg-white/5 hover:bg-white/10 cursor-hover overflow-hidden"
                         >
-                            <span>{{ option }}</span>
-                            <span class="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                            <span class="text-4xl filter grayscale group-hover:grayscale-0 transition-all duration-300">{{ option.icon }}</span>
+                            <div class="relative z-10">
+                                <span class="block text-lg font-bold mb-1">{{ option.label }}</span>
+                                <span class="text-xs text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0 duration-300 block">Выбрать</span>
+                            </div>
+                            <!-- Subtle Glow -->
+                            <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
                         </button>
                     </div>
+                </div>
 
-                    <!-- Footer -->
-                    <div class="flex justify-center">
-                        <button @click="skipQuiz" class="text-white/40 hover:text-white text-sm uppercase tracking-widest cursor-hover transition-colors">
-                            Пропустить и открыть каталог
-                        </button>
+                <!-- Footer Actions -->
+                <div class="mt-16 flex justify-between items-center border-t border-white/10 pt-8">
+                     <button @click="skipQuiz" class="text-sm text-gray-500 hover:text-white transition-colors cursor-hover uppercase tracking-widest text-[10px]">
+                        Пропустить опрос
+                    </button>
+                    <div class="text-gray-600 text-[10px] uppercase tracking-widest">
+                        Интеллектуальный подбор
                     </div>
                 </div>
             </div>
-        </transition>
+        </div>
 
-        <!-- MAIN CATALOG LAYOUT -->
-        <div class="flex h-[calc(100vh-80px)]">
+        <!-- MAIN LAYOUT -->
+        <div class="flex min-h-[calc(100vh-96px)]">
             
-            <!-- Sidebar (Left) -->
-            <aside class="w-64 hidden lg:flex flex-col border-r border-white/5 bg-[#0f0f11] p-6 gap-8">
-                <!-- Search -->
-                <div class="relative">
-                    <input 
-                        type="text" 
-                        placeholder="Поиск..." 
-                        class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pl-10 text-sm focus:outline-none focus:border-white/30 transition-colors"
-                    >
-                    <svg class="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                </div>
+            <!-- SIDEBAR FILTERS -->
+            <aside class="w-80 hidden xl:block border-r border-white/5 bg-[#050505] p-8 pb-32 overflow-y-auto fixed h-full z-10 custom-scrollbar">
+                <div class="space-y-12">
+                    
+                    <!-- Search -->
+                    <div class="relative group">
+                        <input 
+                            v-model="filters.search"
+                            type="text" 
+                            placeholder="Поиск..." 
+                            class="w-full bg-transparent border-b border-white/10 py-3 text-sm focus:border-white focus:outline-none transition-colors placeholder:text-gray-600"
+                        >
+                        <svg class="w-4 h-4 text-gray-600 absolute right-0 top-1/2 -translate-y-1/2 group-focus-within:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
 
-                <!-- Navigation -->
-                <nav class="space-y-2">
-                    <button 
-                        v-for="cat in categories" 
-                        :key="cat.id"
-                        @click="activeCategory = cat.id"
-                        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all cursor-hover text-left"
-                        :class="activeCategory === cat.id ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' : 'text-gray-400 hover:bg-white/5 hover:text-white'"
-                    >
-                        <!-- Icon Placeholder (Simple shapes) -->
-                        <div class="w-5 h-5 bg-current rounded-sm opacity-50"></div>
-                        <span class="font-medium">{{ cat.name }}</span>
-                    </button>
-                </nav>
-
-                <!-- Filters Placeholder -->
-                <div class="mt-auto">
-                    <h3 class="text-xs uppercase tracking-widest text-gray-600 mb-4">Фильтры</h3>
-                    <div class="space-y-4">
-                        <div class="flex items-center justify-between text-sm text-gray-400">
-                            <span>Цена</span>
-                            <span>Slider</span>
-                        </div>
-                        <div class="flex items-center justify-between text-sm text-gray-400">
-                            <span>Наличие</span>
-                            <span>Switch</span>
+                    <!-- Categories -->
+                    <div>
+                        <h3 class="text-xs font-mono text-gray-500 mb-6 uppercase tracking-wider">Категории</h3>
+                        <div class="space-y-1">
+                            <button 
+                                v-for="cat in categories" 
+                                :key="cat.id"
+                                @click="filters.category = cat.id"
+                                class="w-full text-left py-2 px-3 -mx-3 rounded-lg text-sm transition-all cursor-hover flex items-center justify-between group"
+                                :class="filters.category === cat.id ? 'bg-white text-black font-bold' : 'text-gray-400 hover:text-white'"
+                            >
+                                {{ cat.name }}
+                                <span v-if="filters.category === cat.id" class="text-[10px]">●</span>
+                            </button>
                         </div>
                     </div>
+
+                    <!-- Filter: Opacity -->
+                    <div>
+                        <h3 class="text-xs font-mono text-gray-500 mb-6 uppercase tracking-wider">Светопроницаемость</h3>
+                        <div class="space-y-3">
+                            <label v-for="opt in filterOptions.opacity" :key="opt.id" class="flex items-center gap-3 cursor-hover group">
+                                <div class="relative flex items-center">
+                                    <input type="checkbox" :value="opt.id" v-model="filters.opacity" class="peer appearance-none w-5 h-5 border border-white/20 rounded-md checked:bg-white checked:border-white transition-colors cursor-pointer relative z-10">
+                                    <svg class="w-3 h-3 text-black absolute top-1 left-1 opacity-0 peer-checked:opacity-100 pointer-events-none z-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                </div>
+                                <span class="text-sm text-gray-400 group-hover:text-white transition-colors">{{ opt.name }}</span>
+                            </label>
+                        </div>
+                    </div>
+
+                     <!-- Filter: Room -->
+                    <div>
+                        <h3 class="text-xs font-mono text-gray-500 mb-6 uppercase tracking-wider">Комната</h3>
+                        <div class="space-y-3">
+                            <label v-for="opt in filterOptions.room" :key="opt.id" class="flex items-center gap-3 cursor-hover group">
+                                <div class="relative flex items-center">
+                                    <input type="checkbox" :value="opt.id" v-model="filters.room" class="peer appearance-none w-5 h-5 border border-white/20 rounded-md checked:bg-white checked:border-white transition-colors cursor-pointer relative z-10">
+                                    <svg class="w-3 h-3 text-black absolute top-1 left-1 opacity-0 peer-checked:opacity-100 pointer-events-none z-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                </div>
+                                <span class="text-sm text-gray-400 group-hover:text-white transition-colors">{{ opt.name }}</span>
+                            </label>
+                        </div>
+                    </div>
+
+                     <!-- Filter: Color -->
+                    <div>
+                        <h3 class="text-xs font-mono text-gray-500 mb-6 uppercase tracking-wider">Цвет</h3>
+                        <div class="grid grid-cols-5 gap-2">
+                            <button 
+                                v-for="opt in filterOptions.color" 
+                                :key="opt.id"
+                                @click="filters.color.includes(opt.id) ? filters.color = filters.color.filter(c => c !== opt.id) : filters.color.push(opt.id)"
+                                class="w-full aspect-square rounded-full border border-white/10 hover:border-white transition-all relative flex items-center justify-center cursor-hover"
+                                :style="{ backgroundColor: opt.hex }"
+                                :title="opt.name"
+                            >
+                                <span v-if="filters.color.includes(opt.id)" class="w-2 h-2 bg-white rounded-full shadow-sm mix-blend-difference"></span>
+                            </button>
+                        </div>
+                    </div>
+
                 </div>
             </aside>
 
-            <!-- Grid Content (Right) -->
-            <main class="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar">
+            <!-- GRID AREA -->
+            <main class="flex-1 xl:ml-80 p-8 md:p-12 relative z-0">
                 
-                <!-- Sort / Breadcrumbs Toolbar -->
-                <div class="flex justify-between items-center mb-8">
-                    <h1 class="text-2xl font-bold">Каталог <span class="text-gray-500 text-sm ml-2">{{ products.length }} товаров</span></h1>
+                <!-- HEADER -->
+                <div class="flex flex-col md:flex-row justify-between items-end mb-12 gap-6 border-b border-white/5 pb-8">
+                    <div>
+                        <h1 class="text-4xl font-bold mb-2 tracking-tight">Каталог</h1>
+                        <p class="text-gray-500 flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                            Найдено {{ filteredProducts.length }} товаров
+                        </p>
+                    </div>
+                    
                     <div class="flex gap-4">
-                        <!-- Sort Dropdown Mock -->
-                        <button class="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-lg text-sm text-gray-300 hover:bg-white/10 cursor-hover">
-                            <span>По популярности</span>
+                         <button class="flex items-center gap-2 px-5 py-3 border border-white/10 rounded-full text-sm hover:bg-white hover:text-black transition-all cursor-hover">
+                            <span>Сортировка</span>
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </button>
-                         <button class="bg-blue-600 px-6 py-2 rounded-lg text-sm font-bold shadow-lg shadow-blue-900/20 hover:bg-blue-500 cursor-hover">
-                            + Создать (Demo)
                         </button>
                     </div>
                 </div>
-
-                <!-- Product Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                
+                <!-- GRID -->
+                 <div v-if="filteredProducts.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-x-6 gap-y-12">
                     <div 
                         v-for="product in products" 
                         :key="product.id"
-                        class="group relative bg-[#141416] rounded-2xl p-4 border border-white/5 hover:border-white/20 transition-all duration-300 hover:-translate-y-1"
+                        class="group cursor-hover"
                     >
-                        <!-- Image Area -->
-                        <div class="aspect-square bg-[#0f0f11] rounded-xl mb-4 overflow-hidden relative">
-                             <!-- Placeholder Image Gradient if no image -->
-                             <div class="absolute inset-0 bg-gradient-to-br from-gray-800 to-black"></div>
-                             
-                             <!-- Action Buttons (Hover) -->
-                             <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-2">
-                                <button class="w-8 h-8 rounded-full bg-white/10 backdrop-blur flex items-center justify-center hover:bg-white hover:text-black cursor-hover text-white">
-                                    ♥
-                                </button>
-                             </div>
+                        <!-- Image -->
+                        <div class="aspect-[3/4] bg-[#141416] rounded-xl overflow-hidden relative mb-6">
+                            <div class="absolute inset-0 bg-white/5 animate-pulse" v-if="!product.image"></div>
+                            <!-- Image overlay gradient -->
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity"></div>
+                            
+                            <!-- Badges -->
+                            <div class="absolute top-4 left-4 flex gap-2">
+                                <span v-if="product.opacity === 'blackout'" class="px-2 py-1 bg-black/50 backdrop-blur border border-white/10 rounded text-[10px] uppercase font-bold tracking-wider">Blackout</span>
+                            </div>
+
+                            <!-- Buttons -->
+                            <button class="absolute bottom-4 right-4 w-10 h-10 bg-white text-black rounded-full flex items-center justify-center opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 shadow-lg hover:scale-110">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            </button>
                         </div>
 
                         <!-- Info -->
                         <div>
-                            <div class="flex justify-between items-start mb-2">
-                                <h3 class="font-bold text-lg leading-tight group-hover:text-blue-400 transition-colors">{{ product.name }}</h3>
-                                <!-- Category Badge -->
-                                <div class="w-2 h-2 rounded-full bg-blue-500 mt-1.5"></div>
+                            <div class="flex justify-between items-start mb-1">
+                                <h3 class="text-lg font-medium group-hover:underline decoration-1 underline-offset-4">{{ product.name }}</h3>
+                                <span class="font-bold">{{ product.price }}</span>
                             </div>
-                            <p class="text-xs text-gray-500 mb-4">{{ product.category }}</p>
-                            
-                            <div class="flex items-center justify-between border-t border-white/5 pt-4">
-                                <div>
-                                    <span class="text-xs text-gray-500 block">Цена от</span>
-                                    <span class="font-mono text-lg">{{ product.price }}</span>
-                                </div>
-                                <button class="px-3 py-1.5 text-xs bg-white/5 rounded-lg hover:bg-white hover:text-black transition-colors cursor-hover">
-                                    В корзину
-                                </button>
-                            </div>
+                            <p class="text-sm text-gray-500 capitalize">{{ product.room }} • {{ product.category }}</p>
                         </div>
                     </div>
-                </div>
+                 </div>
+
+                 <!-- Empty State -->
+                 <div v-else class="py-20 text-center">
+                    <p class="text-2xl font-bold text-gray-600 mb-4">Ничего не найдено</p>
+                    <button @click="Object.assign(filters, { opacity: [], room: [], color: [], category: 'all' })" class="text-white border-b border-white pb-1 hover:text-gray-300 transition-colors">Сбросить фильтры</button>
+                 </div>
 
             </main>
         </div>
-
     </div>
 </template>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.5s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-/* Custom Scrollbar */
-.custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.1);
-    border-radius: 10px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(255,255,255,0.2);
-}
-</style>
