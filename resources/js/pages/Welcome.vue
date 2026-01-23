@@ -12,24 +12,70 @@ const canvasRef = ref<HTMLCanvasElement | null>(null);
 const sequenceContainer = ref<HTMLElement | null>(null);
 const horizontalContainer = ref<HTMLElement | null>(null);
 
-// Reactive State for Curtain Simulator
-const curtainOpen = ref(20);
-const selectedColor = ref('#1a1a1a'); // Default Black
-import { computed } from 'vue';
+// --- Reactive State for Advanced Simulator ---
+const windowWidth = ref(3.0); // Meters
+const curtainHeight = ref(2.8); // Meters
+const openPercentage = ref(0); // 0 = Closed, 100 = Fully Open
+const selectedColor = ref('#1a1a1a');
+const motorType = ref('somfy'); // 'somfy', 'xiaomi', 'manual'
+const isAnimating = ref(false);
+
+import { computed, watch } from 'vue';
+
+// Pricing Constants
+const PRICES = {
+    fabric: { black: 1500, red: 2500, beige: 1200, blue: 1800 },
+    motor: { somfy: 15000, xiaomi: 8000, manual: 0 },
+    work: 5000
+};
 
 const colors = [
-    { value: 'black', hex: '#1a1a1a' },
-    { value: 'red', hex: '#dc2626' },
-    { value: 'beige', hex: '#e5e5e5' },
-    { value: 'blue', hex: '#1e3a8a' },
+    { value: 'black', hex: '#1a1a1a', name: 'Blackout Night' },
+    { value: 'red', hex: '#7f1d1d', name: 'Royal Velvet' }, // Darker red for realism
+    { value: 'beige', hex: '#d6d3d1', name: 'Soft Linen' },
+    { value: 'blue', hex: '#1e3a8a', name: 'Deep Ocean' },
 ];
 
+const motors = [
+    { id: 'somfy', name: 'Somfy (France)', speed: 0.15 }, // Speed in m/s
+    { id: 'xiaomi', name: 'Xiaomi (Smart)', speed: 0.12 },
+    { id: 'manual', name: 'Без мотора', speed: 0.5 } // Hand speed variable
+];
+
+// --- Computed Logic ---
 const calculatePrice = computed(() => {
-    // Basic reactive math: Base price + (Material cost relative to color)
-    let base = 15000;
-    if (selectedColor.value === '#dc2626') base += 5000; // Red is premium
-    if (selectedColor.value === '#1e3a8a') base += 2000;
-    return (base * (1 + curtainOpen.value / 1000)).toFixed(0); 
+    const area = windowWidth.value * curtainHeight.value;
+    const fabricCost = area * (PRICES.fabric[selectedColor.value as keyof typeof PRICES.fabric] || 1500);
+    const motorCost = PRICES.motor[motorType.value as keyof typeof PRICES.motor];
+    return (fabricCost * 2 + motorCost + PRICES.work).toLocaleString('ru-RU'); // *2 for fold factor
+});
+
+// --- Realistic Animation Logic ---
+const visualOpenness = ref(0); // The value actually shown on screen (0-100)
+
+// Watch target change and animate smoothly
+watch(openPercentage, (newVal) => {
+    if (motorType.value === 'manual') {
+        visualOpenness.value = newVal; // Instant for manual preview (or drag)
+        return;
+    }
+
+    const currentMeters = (visualOpenness.value / 100) * (windowWidth.value / 2);
+    const targetMeters = (newVal / 100) * (windowWidth.value / 2);
+    const distance = Math.abs(targetMeters - currentMeters);
+    
+    // Calculate realistic duration based on motor speed
+    const motor = motors.find(m => m.id === motorType.value);
+    const speed = motor ? motor.speed : 0.1; 
+    const duration = distance / speed; // seconds
+
+    gsap.to(visualOpenness, {
+        value: newVal,
+        duration: duration,
+        ease: "power2.inOut", // Motor acceleration/deceleration curve
+        onStart: () => isAnimating.value = true,
+        onComplete: () => isAnimating.value = false
+    });
 });
 
 onMounted(() => {
@@ -93,17 +139,24 @@ onMounted(() => {
         });
     }
 
-    // 4. #Gsap Горизонтальный скролл (Нестандартный блок)
+    // 3. #Gsap Горизонтальный скролл с МАГНИТОМ
     if (horizontalContainer.value) {
+        const sections = 4; // Total slides
         gsap.to(horizontalContainer.value, {
             x: () => -(horizontalContainer.value!.scrollWidth - window.innerWidth),
             ease: "none",
             scrollTrigger: {
                 trigger: "#horizontal-wrapper",
                 start: "top top",
-                end: "+=2000", // Длина скролла
-                pin: true, // Закрепляем экран
+                end: () => "+=" + (window.innerWidth * (sections - 1)), // Exact length
+                pin: true,
                 scrub: 1,
+                snap: {
+                    snapTo: 1 / (sections - 1), // Snap to each section
+                    duration: { min: 0.2, max: 0.5 },
+                    delay: 0.1,
+                    ease: "power1.inOut"
+                }
             }
         });
     }
@@ -183,71 +236,165 @@ onMounted(() => {
                      </div>
                 </div>
 
-                <!-- Slide 3: Interactive Playground (Functional Reactivity) -->
+                <!-- Slide 3: ADVANCED INTERACTIVE SIMULATOR -->
                 <div class="flex h-full w-screen items-center justify-center bg-gray-900 text-white relative">
                     <div class="absolute top-10 left-10 text-9xl font-bold opacity-10">03</div>
                     
-                    <div class="flex w-full max-w-6xl gap-12 items-center">
+                    <div class="flex w-full max-w-7xl gap-16 items-start h-[70vh]">
                         
-                        <!-- Controls -->
-                        <div class="w-1/3 bg-white/5 p-8 rounded-3xl border border-white/10 backdrop-blur-sm">
-                            <h3 class="text-3xl font-bold mb-8">Умный дом</h3>
-                            
-                            <div class="mb-8">
-                                <label class="block text-sm text-gray-400 mb-2">Открытие штор: {{ curtainOpen }}%</label>
-                                <input 
-                                    type="range" 
-                                    v-model="curtainOpen" 
-                                    min="0" 
-                                    max="100" 
-                                    class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-red-600"
-                                >
-                            </div>
+                        <!-- Controls Panel -->
+                        <div class="w-1/3 h-full flex flex-col justify-between bg-white/5 p-8 rounded-3xl border border-white/10 backdrop-blur-sm overflow-y-auto custom-scrollbar">
+                            <div>
+                                <h3 class="text-3xl font-bold mb-2">Конфигуратор</h3>
+                                <p class="text-sm text-gray-400 mb-8">Создайте идеальный сценарий</p>
+                                
+                                <!-- 1. Dimensions -->
+                                <div class="mb-8 p-4 bg-black/20 rounded-2xl border border-white/5">
+                                    <label class="block text-xs uppercase tracking-widest text-gray-500 mb-4">Размеры окна (м)</label>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <span class="text-xs text-gray-400 block mb-1">Ширина</span>
+                                            <input type="number" step="0.1" v-model="windowWidth" class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-red-500 outline-none">
+                                        </div>
+                                        <div>
+                                            <span class="text-xs text-gray-400 block mb-1">Высота</span>
+                                            <input type="number" step="0.1" v-model="curtainHeight" class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-red-500 outline-none">
+                                        </div>
+                                    </div>
+                                </div>
 
-                            <div class="mb-8">
-                                <label class="block text-sm text-gray-400 mb-4">Цвет ткани</label>
-                                <div class="flex gap-4">
-                                    <button 
-                                        v-for="color in colors" 
-                                        :key="color.value"
-                                        @click="selectedColor = color.value"
-                                        class="w-10 h-10 rounded-full border-2 transition-all duration-300"
-                                        :class="selectedColor === color.value ? 'border-white scale-110' : 'border-transparent opacity-50 hover:opacity-100'"
-                                        :style="{ backgroundColor: color.hex }"
-                                    ></button>
+                                <!-- 2. Controls (Realistic) -->
+                                <div class="mb-8">
+                                    <div class="flex justify-between mb-2">
+                                        <label class="text-sm text-white font-medium">Положение штор</label>
+                                        <span class="text-xs font-mono" :class="isAnimating ? 'text-red-400 animate-pulse' : 'text-green-400'">
+                                            {{ isAnimating ? 'MOVING...' : 'IDLE' }}
+                                        </span>
+                                    </div>
+                                    
+                                    <!-- Custom Range Slider -->
+                                    <div class="relative h-12 bg-black/40 rounded-xl border border-white/10 flex items-center px-4 mb-2">
+                                        <input 
+                                            type="range" 
+                                            v-model.number="openPercentage" 
+                                            min="0" 
+                                            max="100" 
+                                            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                        >
+                                        <div class="flex-1 h-1 bg-gray-700 rounded-full overflow-hidden relative">
+                                            <div class="absolute h-full bg-red-600 transition-all duration-300" :style="{ width: openPercentage + '%' }"></div>
+                                        </div>
+                                        <span class="ml-4 font-mono text-sm w-12 text-right">{{ openPercentage }}%</span>
+                                    </div>
+                                    <div class="flex justify-between text-[10px] text-gray-500 uppercase font-mono">
+                                        <span>Закрыто</span>
+                                        <span>Открыто</span>
+                                    </div>
+                                </div>
+
+                                <!-- 3. Options -->
+                                <div class="space-y-6">
+                                    <div>
+                                        <label class="block text-sm text-gray-400 mb-3">Ткань</label>
+                                        <div class="grid grid-cols-4 gap-2">
+                                            <button 
+                                                v-for="color in colors" 
+                                                :key="color.value"
+                                                @click="selectedColor = color.value"
+                                                class="aspect-square rounded-xl border-2 transition-all duration-300 relative overflow-hidden group"
+                                                :class="selectedColor === color.value ? 'border-white' : 'border-transparent opacity-60 hover:opacity-100'"
+                                            >
+                                                <div class="absolute inset-0" :style="{ backgroundColor: color.hex }"></div>
+                                                <div v-if="selectedColor === color.value" class="absolute inset-0 flex items-center justify-center bg-black/20">
+                                                    <div class="w-2 h-2 bg-white rounded-full"></div>
+                                                </div>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-sm text-gray-400 mb-3">Привод</label>
+                                        <div class="grid grid-cols-1 gap-2">
+                                             <button 
+                                                v-for="motor in motors"
+                                                :key="motor.id"
+                                                @click="motorType = motor.id"
+                                                class="text-left px-4 py-3 rounded-xl border transition-all flex justify-between items-center"
+                                                :class="motorType === motor.id ? 'bg-white/10 border-white text-white' : 'border-white/5 text-gray-500 hover:bg-white/5'"
+                                             >
+                                                <span class="text-sm font-medium">{{ motor.name }}</span>
+                                                <span v-if="motorType === motor.id" class="text-xs text-red-500">Selected</span>
+                                             </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="p-4 bg-black/30 rounded-xl">
-                                <div class="flex justify-between items-center mb-2">
-                                    <span class="text-sm font-medium">Стоимость</span>
-                                    <span class="text-xl font-bold text-red-500">{{ calculatePrice }} ₽</span>
+                            <!-- Price Footer -->
+                            <div class="mt-8 pt-6 border-t border-white/10">
+                                <div class="flex justify-between items-end">
+                                    <div>
+                                        <span class="text-xs text-gray-500 block">Итоговая стоимость</span>
+                                        <span class="text-3xl font-bold text-white tracking-tight">{{ calculatePrice }} ₽</span>
+                                    </div>
+                                    <button class="px-6 py-3 bg-red-600 rounded-xl font-bold text-sm hover:bg-red-500 transition-colors shadow-lg shadow-red-900/40">
+                                        В корзину
+                                    </button>
                                 </div>
-                                <p class="text-xs text-gray-500">Примерный расчет для вашего окна</p>
                             </div>
                         </div>
 
-                        <!-- Visualization -->
-                        <div class="w-2/3 h-[600px] relative bg-gray-800 rounded-3xl overflow-hidden shadow-2xl border-4 border-gray-700">
-                             <!-- Window View (Night City) -->
-                             <div class="absolute inset-0 bg-cover bg-center transition-all duration-1000" 
-                                  style="background-image: url('https://images.unsplash.com/photo-1519608487953-e999c9dc296f?q=80&w=2574&auto=format&fit=crop');">
-                             </div>
+                        <!-- Visualizer Area -->
+                        <div class="flex-1 h-full relative">
+                            <!-- Room Container -->
+                            <div class="h-full w-full bg-gray-800 rounded-3xl overflow-hidden shadow-2xl border-4 border-gray-700 relative">
+                                 <!-- Background: Night City -->
+                                 <div class="absolute inset-0 bg-cover bg-center" 
+                                      style="background-image: url('https://images.unsplash.com/photo-1519608487953-e999c9dc296f?q=80&w=2574&auto=format&fit=crop'); filter: brightness(0.7);">
+                                 </div>
+                                 
+                                 <!-- Window Frame Override (Simulate Wall) -->
+                                 <div class="absolute inset-0 border-[40px] border-[#1a1a1a] pointer-events-none z-20"></div>
 
-                             <!-- Curtains (React to Width) -->
-                             <div class="absolute inset-y-0 left-0 bg-cover transition-all duration-500 shadow-2xl z-10"
-                                  :style="{ width: (50 - curtainOpen / 2) + '%', backgroundColor: selectedColor }">
-                                  <div class="w-full h-full bg-gradient-to-r from-black/50 to-transparent"></div> <!-- Fold shadow -->
-                             </div>
-                             <div class="absolute inset-y-0 right-0 bg-cover transition-all duration-500 shadow-2xl z-10"
-                                  :style="{ width: (50 - curtainOpen / 2) + '%', backgroundColor: selectedColor }">
-                                  <div class="w-full h-full bg-gradient-to-l from-black/50 to-transparent"></div> <!-- Fold shadow -->
-                             </div>
+                                 <!-- Curtains Container: Center Width Reference -->
+                                 <div class="absolute inset-0 flex justify-center items-start pt-[40px] z-10 overflow-hidden px-[40px]">
+                                     
+                                     <!-- Left Curtain -->
+                                     <div 
+                                        class="h-full bg-cover relative shadow-[10px_0_30px_rgba(0,0,0,0.5)] transition-none will-change-transform origin-left"
+                                        :style="{ 
+                                            backgroundColor: colors.find(c => c.value === selectedColor)?.hex || selectedColor, // Safe lookup instead of just selectedColor
+                                            width: (50 - visualOpenness / 2) + '%',
+                                            marginRight: 'auto'
+                                        }"
+                                     >
+                                        <!-- Realistic Texture/Folds -->
+                                        <div class="absolute inset-0 opacity-40 bg-[repeating-linear-gradient(90deg,transparent,transparent_20px,rgba(0,0,0,0.3)_25px,rgba(255,255,255,0.05)_40px)]"></div>
+                                        <!-- Bottom Hem -->
+                                        <div class="absolute bottom-0 w-full h-24 bg-gradient-to-t from-black/40 to-transparent"></div>
+                                     </div>
 
-                             <!-- Info Overlay -->
-                             <div class="absolute bottom-6 left-6 px-4 py-2 bg-black/60 backdrop-blur-md rounded-lg z-20">
-                                <span class="text-xs font-mono uppercase tracking-wider text-green-400">● System Online</span>
-                             </div>
+                                     <!-- Right Curtain -->
+                                     <div 
+                                        class="h-full bg-cover relative shadow-[-10px_0_30px_rgba(0,0,0,0.5)] transition-none will-change-transform origin-right"
+                                        :style="{ 
+                                            backgroundColor: colors.find(c => c.value === selectedColor)?.hex || selectedColor, 
+                                            width: (50 - visualOpenness / 2) + '%',
+                                            marginLeft: 'auto'
+                                        }"
+                                     >
+                                         <div class="absolute inset-0 opacity-40 bg-[repeating-linear-gradient(90deg,transparent,transparent_20px,rgba(0,0,0,0.3)_25px,rgba(255,255,255,0.05)_40px)]"></div>
+                                         <div class="absolute bottom-0 w-full h-24 bg-gradient-to-t from-black/40 to-transparent"></div>
+                                     </div>
+
+                                 </div>
+
+                                 <!-- Motor Sound Indicator -->
+                                 <div v-if="isAnimating && motorType !== 'manual'" class="absolute top-8 right-8 px-3 py-1 bg-black/80 rounded-full flex items-center gap-2 z-30">
+                                    <div class="w-2 h-2 bg-green-500 rounded-full animate-ping"></div>
+                                    <span class="text-[10px] font-mono uppercase text-gray-300">Motor Active</span>
+                                 </div>
+                            </div>
                         </div>
 
                     </div>
