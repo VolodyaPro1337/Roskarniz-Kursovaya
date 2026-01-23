@@ -12,9 +12,25 @@ const canvasRef = ref<HTMLCanvasElement | null>(null);
 const sequenceContainer = ref<HTMLElement | null>(null);
 const horizontalContainer = ref<HTMLElement | null>(null);
 
-// Placeholder for sequence frame count
-const frameCount = 120; 
-const currentFrame = { index: 0 };
+// Reactive State for Curtain Simulator
+const curtainOpen = ref(20);
+const selectedColor = ref('#1a1a1a'); // Default Black
+import { computed } from 'vue';
+
+const colors = [
+    { value: 'black', hex: '#1a1a1a' },
+    { value: 'red', hex: '#dc2626' },
+    { value: 'beige', hex: '#e5e5e5' },
+    { value: 'blue', hex: '#1e3a8a' },
+];
+
+const calculatePrice = computed(() => {
+    // Basic reactive math: Base price + (Material cost relative to color)
+    let base = 15000;
+    if (selectedColor.value === '#dc2626') base += 5000; // Red is premium
+    if (selectedColor.value === '#1e3a8a') base += 2000;
+    return (base * (1 + curtainOpen.value / 1000)).toFixed(0); 
+});
 
 onMounted(() => {
     // 1. #Gsap Параллакс эффект (Мышь)
