@@ -129,7 +129,7 @@ onMounted(() => {
 
         <!-- СЕКЦИЯ 2: Горизонтальный скролл (Авангардный стиль) -->
         <div id="horizontal-wrapper" class="relative h-screen overflow-hidden bg-white text-black">
-            <div ref="horizontalContainer" class="flex h-full w-[300vw]">
+            <div ref="horizontalContainer" class="flex h-full w-[400vw]">
                 
                 <!-- Slide 1: Intro -->
                 <div class="flex h-full w-screen items-center justify-center bg-black text-white relative border-r border-white/10">
@@ -167,7 +167,77 @@ onMounted(() => {
                      </div>
                 </div>
 
-                <!-- Slide 3: Call to Action -->
+                <!-- Slide 3: Interactive Playground (Functional Reactivity) -->
+                <div class="flex h-full w-screen items-center justify-center bg-gray-900 text-white relative">
+                    <div class="absolute top-10 left-10 text-9xl font-bold opacity-10">03</div>
+                    
+                    <div class="flex w-full max-w-6xl gap-12 items-center">
+                        
+                        <!-- Controls -->
+                        <div class="w-1/3 bg-white/5 p-8 rounded-3xl border border-white/10 backdrop-blur-sm">
+                            <h3 class="text-3xl font-bold mb-8">Умный дом</h3>
+                            
+                            <div class="mb-8">
+                                <label class="block text-sm text-gray-400 mb-2">Открытие штор: {{ curtainOpen }}%</label>
+                                <input 
+                                    type="range" 
+                                    v-model="curtainOpen" 
+                                    min="0" 
+                                    max="100" 
+                                    class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-red-600"
+                                >
+                            </div>
+
+                            <div class="mb-8">
+                                <label class="block text-sm text-gray-400 mb-4">Цвет ткани</label>
+                                <div class="flex gap-4">
+                                    <button 
+                                        v-for="color in colors" 
+                                        :key="color.value"
+                                        @click="selectedColor = color.value"
+                                        class="w-10 h-10 rounded-full border-2 transition-all duration-300"
+                                        :class="selectedColor === color.value ? 'border-white scale-110' : 'border-transparent opacity-50 hover:opacity-100'"
+                                        :style="{ backgroundColor: color.hex }"
+                                    ></button>
+                                </div>
+                            </div>
+
+                            <div class="p-4 bg-black/30 rounded-xl">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-sm font-medium">Стоимость</span>
+                                    <span class="text-xl font-bold text-red-500">{{ calculatePrice }} ₽</span>
+                                </div>
+                                <p class="text-xs text-gray-500">Примерный расчет для вашего окна</p>
+                            </div>
+                        </div>
+
+                        <!-- Visualization -->
+                        <div class="w-2/3 h-[600px] relative bg-gray-800 rounded-3xl overflow-hidden shadow-2xl border-4 border-gray-700">
+                             <!-- Window View (Night City) -->
+                             <div class="absolute inset-0 bg-cover bg-center transition-all duration-1000" 
+                                  style="background-image: url('https://images.unsplash.com/photo-1519608487953-e999c9dc296f?q=80&w=2574&auto=format&fit=crop');">
+                             </div>
+
+                             <!-- Curtains (React to Width) -->
+                             <div class="absolute inset-y-0 left-0 bg-cover transition-all duration-500 shadow-2xl z-10"
+                                  :style="{ width: (50 - curtainOpen / 2) + '%', backgroundColor: selectedColor }">
+                                  <div class="w-full h-full bg-gradient-to-r from-black/50 to-transparent"></div> <!-- Fold shadow -->
+                             </div>
+                             <div class="absolute inset-y-0 right-0 bg-cover transition-all duration-500 shadow-2xl z-10"
+                                  :style="{ width: (50 - curtainOpen / 2) + '%', backgroundColor: selectedColor }">
+                                  <div class="w-full h-full bg-gradient-to-l from-black/50 to-transparent"></div> <!-- Fold shadow -->
+                             </div>
+
+                             <!-- Info Overlay -->
+                             <div class="absolute bottom-6 left-6 px-4 py-2 bg-black/60 backdrop-blur-md rounded-lg z-20">
+                                <span class="text-xs font-mono uppercase tracking-wider text-green-400">● System Online</span>
+                             </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Slide 4: Call to Action -->
                 <div class="flex h-full w-screen items-center justify-center bg-red-600 text-white relative">
                     <div class="text-center">
                         <h2 class="text-[8vw] font-black leading-none mb-10">ХОЧУ <br> ТАК ЖЕ</h2>
