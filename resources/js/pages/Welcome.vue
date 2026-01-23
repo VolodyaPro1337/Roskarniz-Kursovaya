@@ -344,6 +344,9 @@ onMounted(() => {
                             </div>
                         </div>
 
+                    </div>
+                </div>
+
                 <!-- Slide 4: Call to Action -->
                 <div class="flex h-full w-screen items-center justify-center bg-red-600 text-white relative">
                     <div class="text-center">
