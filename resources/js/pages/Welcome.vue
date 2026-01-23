@@ -13,7 +13,7 @@ const sequenceContainer = ref<HTMLElement | null>(null);
 const horizontalContainer = ref<HTMLElement | null>(null);
 
 // Placeholder for sequence frame count
-const frameCount = 1; 
+const frameCount = 120; 
 const currentFrame = { index: 0 };
 
 onMounted(() => {
@@ -30,30 +30,51 @@ onMounted(() => {
 
     // 3. #Gsap "Открытие штор" (Секвенция)
     const context = canvasRef.value?.getContext("2d");
+    
+    // Helper must be inside or context passed
+    const updateImage = (index: number) => {
+        if (!canvasRef.value || !context) return;
+        
+        // Format: ezgif-frame-001.jpg
+        const paddedIndex = String(index + 1).padStart(3, '0'); 
+        const img = new Image();
+        img.src = `/images/sequence/ezgif-frame-${paddedIndex}.jpg`;
+        
+        img.onload = () => {
+            if (canvasRef.value) {
+                // Cover fit logic (mimic object-cover)
+                const canvas = canvasRef.value;
+                const ctx = context;
+                const dpr = window.devicePixelRatio || 1;
+                
+                // Optional: handle resize if needed, for now draw simple
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            }
+        };
+    };
+
     if (canvasRef.value && context) {
         canvasRef.value.width = window.innerWidth;
         canvasRef.value.height = window.innerHeight;
 
-        const img = new Image();
-        img.src = "/images/hero-bg.png"; 
-        img.onload = () => {
-            context.drawImage(img, 0, 0, canvasRef.value!.width, canvasRef.value!.height);
-        };
+        // Load first frame
+        updateImage(0);
 
-        // Логика секвенции (когда будут кадры)
-        // Сейчас просто зум и исчезновение
-        const tl = gsap.timeline({
+        gsap.to(currentFrame, {
+            index: frameCount - 1,
+            snap: "index",
             scrollTrigger: {
-                trigger: sequenceContainer.value, // Привязка к контейнеру 300vh
+                trigger: sequenceContainer.value,
                 start: "top top",
                 end: "bottom bottom",
                 scrub: 0.5,
-                pin: true, // Закрепляем канвас пока скроллим
+                pin: true, 
+            },
+            onUpdate: () => {
+                updateImage(currentFrame.index);
             }
         });
-
-        tl.to(canvasRef.value, { scale: 1.1, duration: 1 }) // Зум
-          .to(canvasRef.value, { opacity: 0, duration: 0.5 }, ">-0.5"); // Исчезновение в конце
     }
 
     // 4. #Gsap Горизонтальный скролл (Нестандартный блок)
