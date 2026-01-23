@@ -35,10 +35,10 @@ onMounted(() => {
     const updateImage = (index: number) => {
         if (!canvasRef.value || !context) return;
         
-        // Format: ezgif-frame-001.jpg
+        // Format: frame-001.jpg
         const paddedIndex = String(index + 1).padStart(3, '0'); 
         const img = new Image();
-        img.src = `/images/sequence/ezgif-frame-${paddedIndex}.jpg`;
+        img.src = `/images/sequence/frame-${paddedIndex}.jpg`;
         
         img.onload = () => {
             if (canvasRef.value) {
