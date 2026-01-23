@@ -7,7 +7,7 @@ const heroText = ref<HTMLElement | null>(null);
 const glassCard = ref<HTMLElement | null>(null);
 
 onMounted(() => {
-    // Basic Mouse Parallax Effect
+    // #Gsap Параллакс эффект
     window.addEventListener('mousemove', (e) => {
         if (!glassCard.value) return;
         
@@ -22,7 +22,7 @@ onMounted(() => {
         });
     });
 
-    // Intro Animation
+    // #Gsap Анимация появления
     gsap.from(heroText.value, {
         y: 50,
         opacity: 0,
@@ -37,19 +37,19 @@ onMounted(() => {
     <Head title="Шторы" />
 
     <div class="relative min-h-screen overflow-hidden bg-[#0f0f11] text-white selection:bg-red-500 selection:text-white">
-        <!-- Abstract Background Blobs -->
+        <!-- Абстрактный фон -->
         <div class="absolute top-[-20%] left-[-10%] h-[500px] w-[500px] rounded-full bg-purple-600/30 blur-[120px]"></div>
         <div class="absolute bottom-[-20%] right-[-10%] h-[600px] w-[600px] rounded-full bg-red-600/20 blur-[120px]"></div>
 
-        <!-- Main Content -->
+        <!-- Основной контент -->
         <main class="relative z-10 flex min-h-screen flex-col items-center justify-center p-6">
             
-            <!-- Glass Card -->
+            <!-- Стеклянная карточка -->
             <div 
                 ref="glassCard"
                 class="glass-panel relative flex aspect-[1.58/1] w-full max-w-4xl flex-col items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl backdrop-blur-3xl"
             >
-                <!-- Decorative Elements inside card -->
+                <!-- Декоративные элементы -->
                 <div class="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-50"></div>
                 
                 <h1 
