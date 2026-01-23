@@ -4,12 +4,15 @@ import { onMounted, ref } from 'vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
+import Navigation from '@/Components/Navigation.vue';
+import CustomCursor from '@/Components/CustomCursor.vue';
+
 gsap.registerPlugin(ScrollTrigger);
 
 const heroText = ref<HTMLElement | null>(null);
 const glassCard = ref<HTMLElement | null>(null);
-const canvasRef = ref<HTMLCanvasElement | null>(null);
-const sequenceContainer = ref<HTMLElement | null>(null);
+const canvasRef = ref<HTMLCanvasElement | null>(null); 
+// Sequence Logic Removed (Placeholder)
 const horizontalContainer = ref<HTMLElement | null>(null);
 
 // --- Реактивный стейт конфигуратора ---
@@ -117,7 +120,10 @@ onMounted(() => {
 <template>
     <Head title="Шторы" />
 
-    <div class="bg-[#0f0f11] text-white selection:bg-red-500 selection:text-white overflow-x-hidden">
+    <Navigation />
+    <CustomCursor />
+
+    <div class="bg-[#0f0f11] text-white selection:bg-red-500 selection:text-white overflow-x-hidden cursor-none">
         
         <!-- СЕКЦИЯ 1: Hero -->
         <div class="relative h-screen w-full overflow-hidden"> 
