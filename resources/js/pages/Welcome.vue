@@ -12,17 +12,17 @@ const canvasRef = ref<HTMLCanvasElement | null>(null);
 const sequenceContainer = ref<HTMLElement | null>(null);
 const horizontalContainer = ref<HTMLElement | null>(null);
 
-// --- Reactive State for Advanced Simulator ---
-const windowWidth = ref(3.0); // Meters
-const curtainHeight = ref(2.8); // Meters
-const openPercentage = ref(0); // 0 = Closed, 100 = Fully Open
+// --- Реактивный стейт конфигуратора ---
+const windowWidth = ref(3.0); // Метры
+const curtainHeight = ref(2.8); // Метры
+const openPercentage = ref(0); // 0 = Закрыто, 100 = Открыто
 const selectedColor = ref('#1a1a1a');
 const motorType = ref('somfy'); // 'somfy', 'xiaomi', 'manual'
 const isAnimating = ref(false);
 
 import { computed, watch } from 'vue';
 
-// Pricing Constants
+// Константы цен
 const PRICES = {
     fabric: { black: 1500, red: 2500, beige: 1200, blue: 1800 },
     motor: { somfy: 15000, xiaomi: 8000, manual: 0 },
@@ -31,32 +31,31 @@ const PRICES = {
 
 const colors = [
     { value: 'black', hex: '#1a1a1a', name: 'Blackout Night' },
-    { value: 'red', hex: '#7f1d1d', name: 'Royal Velvet' }, // Darker red for realism
+    { value: 'red', hex: '#7f1d1d', name: 'Royal Velvet' }, 
     { value: 'beige', hex: '#d6d3d1', name: 'Soft Linen' },
     { value: 'blue', hex: '#1e3a8a', name: 'Deep Ocean' },
 ];
 
 const motors = [
-    { id: 'somfy', name: 'Somfy (France)', speed: 0.15 }, // Speed in m/s
+    { id: 'somfy', name: 'Somfy (Франция)', speed: 0.15 }, // Скорость м/с
     { id: 'xiaomi', name: 'Xiaomi (Smart)', speed: 0.12 },
-    { id: 'manual', name: 'Без мотора', speed: 0.5 } // Hand speed variable
+    { id: 'manual', name: 'Ручное управление', speed: 0.6 } 
 ];
 
-// --- Computed Logic ---
+// --- Расчет цены (Computed) ---
 const calculatePrice = computed(() => {
     const area = windowWidth.value * curtainHeight.value;
     const fabricCost = area * (PRICES.fabric[selectedColor.value as keyof typeof PRICES.fabric] || 1500);
     const motorCost = PRICES.motor[motorType.value as keyof typeof PRICES.motor];
-    return (fabricCost * 2 + motorCost + PRICES.work).toLocaleString('ru-RU'); // *2 for fold factor
+    return (fabricCost * 2 + motorCost + PRICES.work).toLocaleString('ru-RU'); // x2 коэф. складки
 });
 
-// --- Realistic Animation Logic ---
-const visualOpenness = ref(0); // The value actually shown on screen (0-100)
+// --- Логика реалистичной анимации ---
+const visualOpenness = ref(0); // То, что видим на экране
 
-// Watch target change and animate smoothly
 watch(openPercentage, (newVal) => {
     if (motorType.value === 'manual') {
-        visualOpenness.value = newVal; // Instant for manual preview (or drag)
+        visualOpenness.value = newVal; // "Drag" эффект для ручного
         return;
     }
 
@@ -64,22 +63,23 @@ watch(openPercentage, (newVal) => {
     const targetMeters = (newVal / 100) * (windowWidth.value / 2);
     const distance = Math.abs(targetMeters - currentMeters);
     
-    // Calculate realistic duration based on motor speed
+    // Считаем время на основе скорости мотора
     const motor = motors.find(m => m.id === motorType.value);
     const speed = motor ? motor.speed : 0.1; 
-    const duration = distance / speed; // seconds
+    const duration = distance / speed; // секунды
 
     gsap.to(visualOpenness, {
         value: newVal,
         duration: duration,
-        ease: "power2.inOut", // Motor acceleration/deceleration curve
+        // Более плавная и "тяжелая" физика для премиум штор
+        ease: "power2.inOut", 
         onStart: () => isAnimating.value = true,
         onComplete: () => isAnimating.value = false
     });
 });
 
 onMounted(() => {
-    // 1. #Gsap Параллакс эффект (Мышь)
+    // 1. Параллакс (Мышь)
     window.addEventListener('mousemove', (e) => {
         if (!glassCard.value) return;
         const x = (window.innerWidth - e.pageX * 2) / 100;
@@ -87,75 +87,26 @@ onMounted(() => {
         gsap.to(glassCard.value, { x: x, y: y, duration: 0.5, ease: "power2.out" });
     });
 
-    // 2. #Gsap Анимация появления заголовка
+    // 2. Анимация заголовка
     gsap.from(heroText.value, { y: 100, opacity: 0, duration: 2, ease: "expo.out", delay: 0.5 });
-
-    // 3. #Gsap "Открытие штор" (Секвенция)
-    const context = canvasRef.value?.getContext("2d");
     
-    // Helper must be inside or context passed
-    const updateImage = (index: number) => {
-        if (!canvasRef.value || !context) return;
-        
-        // Format: frame-001.jpg
-        const paddedIndex = String(index + 1).padStart(3, '0'); 
-        const img = new Image();
-        img.src = `/images/sequence/frame-${paddedIndex}.jpg`;
-        
-        img.onload = () => {
-            if (canvasRef.value) {
-                // Cover fit logic (mimic object-cover)
-                const canvas = canvasRef.value;
-                const ctx = context;
-                const dpr = window.devicePixelRatio || 1;
-                
-                // Optional: handle resize if needed, for now draw simple
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            }
-        };
-    };
-
-    if (canvasRef.value && context) {
-        canvasRef.value.width = window.innerWidth;
-        canvasRef.value.height = window.innerHeight;
-
-        // Load first frame
-        updateImage(0);
-
-        gsap.to(currentFrame, {
-            index: frameCount - 1,
-            snap: "index",
-            scrollTrigger: {
-                trigger: sequenceContainer.value,
-                start: "top top",
-                end: "bottom bottom",
-                scrub: 0.5,
-                pin: true, 
-            },
-            onUpdate: () => {
-                updateImage(currentFrame.index);
-            }
-        });
-    }
-
-    // 3. #Gsap Горизонтальный скролл с МАГНИТОМ
+    // 3. Горизонтальный скролл (Магнит)
     if (horizontalContainer.value) {
-        const sections = 4; // Total slides
+        const sections = 4;
         gsap.to(horizontalContainer.value, {
             x: () => -(horizontalContainer.value!.scrollWidth - window.innerWidth),
             ease: "none",
             scrollTrigger: {
                 trigger: "#horizontal-wrapper",
                 start: "top top",
-                end: () => "+=" + (window.innerWidth * (sections - 1)), // Exact length
+                end: () => "+=" + (window.innerWidth * (sections - 1)),
                 pin: true,
                 scrub: 1,
                 snap: {
-                    snapTo: 1 / (sections - 1), // Snap to each section
-                    duration: { min: 0.2, max: 0.5 },
+                    snapTo: 1 / (sections - 1),
+                    duration: { min: 0.2, max: 0.6 },
                     delay: 0.1,
-                    ease: "power1.inOut"
+                    ease: "power2.inOut" // Более плавный магнит
                 }
             }
         });
@@ -168,17 +119,10 @@ onMounted(() => {
 
     <div class="bg-[#0f0f11] text-white selection:bg-red-500 selection:text-white overflow-x-hidden">
         
-        <!-- СЕКЦИЯ 1: "Шторы" (Canvas Sequence) -->
-        <!-- Высота 200vh дает место для разгона анимации -->
-        <!-- СЕКЦИЯ 1: "Шторы" (Static Hero) -->
+        <!-- СЕКЦИЯ 1: Hero -->
         <div class="relative h-screen w-full overflow-hidden"> 
-            <!-- Background Image -->
             <img src="/images/hero-bg.png" alt="Background" class="absolute inset-0 h-full w-full object-cover z-0 opacity-50" />
-            
-            <!-- Overlay Gradient -->
             <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/90 z-0"></div>
-
-            <!-- Контент -->
             <div class="absolute inset-0 z-10 flex flex-col items-center justify-center pointer-events-none">
                  <h1 ref="heroText" class="text-center mix-blend-difference">
                     <span class="block text-[15vw] font-black leading-none tracking-tighter text-white opacity-80">
@@ -189,14 +133,13 @@ onMounted(() => {
                     </span>
                 </h1>
             </div>
-
             <div class="absolute bottom-10 w-full text-center z-20 animate-bounce">
                 <p class="text-xs uppercase tracking-widest text-white/50">Скролльте вниз</p>
                 <svg class="w-6 h-6 mx-auto text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
             </div>
         </div>
 
-        <!-- СЕКЦИЯ 2: Горизонтальный скролл (Авангардный стиль) -->
+        <!-- СЕКЦИЯ 2: Горизонтальный скролл -->
         <div id="horizontal-wrapper" class="relative h-screen overflow-hidden bg-white text-black">
             <div ref="horizontalContainer" class="flex h-full w-[400vw]">
                 
@@ -215,22 +158,17 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <!-- Slide 2: Asymmetrical Gallery -->
+                <!-- Slide 2: Gallery -->
                 <div class="relative flex h-full w-screen items-center bg-[#1a1a1a] text-white overflow-hidden">
                      <div class="absolute top-10 right-10 text-9xl font-bold opacity-10">02</div>
-                     
-                     <!-- Floating Cards (Glass) -->
                      <div class="absolute top-[20%] left-[10%] w-[400px] p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md">
                         <h3 class="text-3xl font-bold mb-2">Blackout</h3>
                         <p class="text-gray-400 text-sm">Полная изоляция от света для идеального сна.</p>
                      </div>
-
                      <div class="absolute bottom-[20%] right-[15%] w-[350px] p-8 rounded-3xl bg-red-600/10 border border-red-500/20 backdrop-blur-md">
                         <h3 class="text-3xl font-bold mb-2 text-red-500">Smart</h3>
-                        <p class="text-gray-300 text-sm">Управляйте шторами голосом. Алиса, открой окно.</p>
+                        <p class="text-gray-300 text-sm">Управляйте шторами голосом.</p>
                      </div>
-
-                     <!-- Center Focus -->
                      <div class="mx-auto text-center transform rotate-[-5deg]">
                         <span class="text-[10rem] font-black opacity-20 stroke-text">БЛЭК<br>АУТ</span>
                      </div>
@@ -248,7 +186,7 @@ onMounted(() => {
                                 <h3 class="text-3xl font-bold mb-2">Конфигуратор</h3>
                                 <p class="text-sm text-gray-400 mb-8">Создайте идеальный сценарий</p>
                                 
-                                <!-- 1. Dimensions -->
+                                <!-- 1. Размеры -->
                                 <div class="mb-8 p-4 bg-black/20 rounded-2xl border border-white/5">
                                     <label class="block text-xs uppercase tracking-widest text-gray-500 mb-4">Размеры окна (м)</label>
                                     <div class="grid grid-cols-2 gap-4">
@@ -263,16 +201,15 @@ onMounted(() => {
                                     </div>
                                 </div>
 
-                                <!-- 2. Controls (Realistic) -->
+                                <!-- 2. Управление -->
                                 <div class="mb-8">
                                     <div class="flex justify-between mb-2">
                                         <label class="text-sm text-white font-medium">Положение штор</label>
                                         <span class="text-xs font-mono" :class="isAnimating ? 'text-red-400 animate-pulse' : 'text-green-400'">
-                                            {{ isAnimating ? 'MOVING...' : 'IDLE' }}
+                                            {{ isAnimating ? '• MOTORS ACTIVE' : '• STANDBY' }}
                                         </span>
                                     </div>
                                     
-                                    <!-- Custom Range Slider -->
                                     <div class="relative h-12 bg-black/40 rounded-xl border border-white/10 flex items-center px-4 mb-2">
                                         <input 
                                             type="range" 
@@ -292,7 +229,7 @@ onMounted(() => {
                                     </div>
                                 </div>
 
-                                <!-- 3. Options -->
+                                <!-- 3. Опции -->
                                 <div class="space-y-6">
                                     <div>
                                         <label class="block text-sm text-gray-400 mb-3">Ткань</label>
@@ -301,13 +238,12 @@ onMounted(() => {
                                                 v-for="color in colors" 
                                                 :key="color.value"
                                                 @click="selectedColor = color.value"
-                                                class="aspect-square rounded-xl border-2 transition-all duration-300 relative overflow-hidden group"
-                                                :class="selectedColor === color.value ? 'border-white' : 'border-transparent opacity-60 hover:opacity-100'"
+                                                class="aspect-square rounded-xl border-2 transition-all duration-300 relative overflow-hidden group shadow-lg"
+                                                :class="selectedColor === color.value ? 'border-white scale-105 shadow-white/20' : 'border-transparent opacity-60 hover:opacity-100'"
                                             >
                                                 <div class="absolute inset-0" :style="{ backgroundColor: color.hex }"></div>
-                                                <div v-if="selectedColor === color.value" class="absolute inset-0 flex items-center justify-center bg-black/20">
-                                                    <div class="w-2 h-2 bg-white rounded-full"></div>
-                                                </div>
+                                                <!-- Текстура на кнопке -->
+                                                <div class="absolute inset-0 bg-[url('/images/noise.png')] opacity-20 mix-blend-overlay"></div>
                                             </button>
                                         </div>
                                     </div>
@@ -323,82 +259,90 @@ onMounted(() => {
                                                 :class="motorType === motor.id ? 'bg-white/10 border-white text-white' : 'border-white/5 text-gray-500 hover:bg-white/5'"
                                              >
                                                 <span class="text-sm font-medium">{{ motor.name }}</span>
-                                                <span v-if="motorType === motor.id" class="text-xs text-red-500">Selected</span>
+                                                <span v-if="motorType === motor.id" class="text-xs text-red-500 font-bold">●</span>
                                              </button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Price Footer -->
+                            <!-- Footer -->
                             <div class="mt-8 pt-6 border-t border-white/10">
                                 <div class="flex justify-between items-end">
                                     <div>
                                         <span class="text-xs text-gray-500 block">Итоговая стоимость</span>
                                         <span class="text-3xl font-bold text-white tracking-tight">{{ calculatePrice }} ₽</span>
                                     </div>
-                                    <button class="px-6 py-3 bg-red-600 rounded-xl font-bold text-sm hover:bg-red-500 transition-colors shadow-lg shadow-red-900/40">
+                                    <button class="px-6 py-3 bg-red-600 rounded-xl font-bold text-sm hover:bg-red-500 transition-colors shadow-lg shadow-red-900/40 transform hover:-translate-y-1">
                                         В корзину
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Visualizer Area -->
-                        <div class="flex-1 h-full relative">
-                            <!-- Room Container -->
+                        <!-- Визуализация -->
+                        <div class="flex-1 h-full relative group">
+                            <!-- Контейнер комнаты -->
                             <div class="h-full w-full bg-gray-800 rounded-3xl overflow-hidden shadow-2xl border-4 border-gray-700 relative">
-                                 <!-- Background: Night City -->
+                                 <!-- Фон: Город -->
                                  <div class="absolute inset-0 bg-cover bg-center" 
-                                      style="background-image: url('https://images.unsplash.com/photo-1519608487953-e999c9dc296f?q=80&w=2574&auto=format&fit=crop'); filter: brightness(0.7);">
+                                      style="background-image: url('https://images.unsplash.com/photo-1519608487953-e999c9dc296f?q=80&w=2574&auto=format&fit=crop'); filter: brightness(0.6);">
                                  </div>
                                  
-                                 <!-- Window Frame Override (Simulate Wall) -->
-                                 <div class="absolute inset-0 border-[40px] border-[#1a1a1a] pointer-events-none z-20"></div>
+                                 <!-- Рама (Стена) -->
+                                 <div class="absolute inset-0 border-[40px] border-[#1a1a1a] pointer-events-none z-20 shadow-inner"></div>
 
-                                 <!-- Curtains Container: Center Width Reference -->
+                                 <!-- ВИЗУАЛЬНЫЕ РАЗМЕРЫ (Линейки) -->
+                                 <div class="absolute top-[10px] left-[50px] right-[50px] h-[20px] z-30 flex items-center justify-center border-b border-white/20">
+                                     <span class="bg-[#1a1a1a] px-2 text-[10px] text-gray-400 font-mono">{{ windowWidth }} м</span>
+                                 </div>
+                                 <div class="absolute top-[50px] left-[10px] bottom-[50px] w-[20px] z-30 flex items-center justify-center border-r border-white/20 writing-mode-vertical">
+                                     <span class="bg-[#1a1a1a] py-2 text-[10px] text-gray-400 font-mono rotate-180 writing-mode-vertical">{{ curtainHeight }} м</span>
+                                 </div>
+
+                                 <!-- Контейнер штор -->
                                  <div class="absolute inset-0 flex justify-center items-start pt-[40px] z-10 overflow-hidden px-[40px]">
                                      
-                                     <!-- Left Curtain -->
+                                     <!-- Левая штора -->
                                      <div 
-                                        class="h-full bg-cover relative shadow-[10px_0_30px_rgba(0,0,0,0.5)] transition-none will-change-transform origin-left"
+                                        class="h-full bg-cover relative shadow-[10px_0_40px_rgba(0,0,0,0.6)] transition-none will-change-transform origin-left"
                                         :style="{ 
-                                            backgroundColor: colors.find(c => c.value === selectedColor)?.hex || selectedColor, // Safe lookup instead of just selectedColor
+                                            backgroundColor: colors.find(c => c.value === selectedColor)?.hex || selectedColor, 
                                             width: (50 - visualOpenness / 2) + '%',
                                             marginRight: 'auto'
                                         }"
                                      >
-                                        <!-- Realistic Texture/Folds -->
-                                        <div class="absolute inset-0 opacity-40 bg-[repeating-linear-gradient(90deg,transparent,transparent_20px,rgba(0,0,0,0.3)_25px,rgba(255,255,255,0.05)_40px)]"></div>
-                                        <!-- Bottom Hem -->
-                                        <div class="absolute bottom-0 w-full h-24 bg-gradient-to-t from-black/40 to-transparent"></div>
+                                        <!-- Улучшенная текстура складок -->
+                                        <div class="absolute inset-0 bg-[repeating-linear-gradient(90deg,transparent,transparent_4%,rgba(0,0,0,0.2)_5%,rgba(255,255,255,0.05)_8%)] opacity-50 mix-blend-multiply"></div>
+                                        <div class="absolute inset-0 bg-[repeating-linear-gradient(90deg,rgba(0,0,0,0.1),transparent_10%)] opacity-30"></div>
+                                        
+                                        <!-- Нижний край (подшив) -->
+                                        <div class="absolute bottom-0 w-full h-[100px] bg-gradient-to-t from-black/60 to-transparent"></div>
                                      </div>
 
-                                     <!-- Right Curtain -->
+                                     <!-- Правая штора -->
                                      <div 
-                                        class="h-full bg-cover relative shadow-[-10px_0_30px_rgba(0,0,0,0.5)] transition-none will-change-transform origin-right"
+                                        class="h-full bg-cover relative shadow-[-10px_0_40px_rgba(0,0,0,0.6)] transition-none will-change-transform origin-right"
                                         :style="{ 
                                             backgroundColor: colors.find(c => c.value === selectedColor)?.hex || selectedColor, 
                                             width: (50 - visualOpenness / 2) + '%',
                                             marginLeft: 'auto'
                                         }"
                                      >
-                                         <div class="absolute inset-0 opacity-40 bg-[repeating-linear-gradient(90deg,transparent,transparent_20px,rgba(0,0,0,0.3)_25px,rgba(255,255,255,0.05)_40px)]"></div>
-                                         <div class="absolute bottom-0 w-full h-24 bg-gradient-to-t from-black/40 to-transparent"></div>
+                                         <div class="absolute inset-0 bg-[repeating-linear-gradient(90deg,transparent,transparent_4%,rgba(0,0,0,0.2)_5%,rgba(255,255,255,0.05)_8%)] opacity-50 mix-blend-multiply"></div>
+                                         <div class="absolute inset-0 bg-[repeating-linear-gradient(90deg,rgba(0,0,0,0.1),transparent_10%)] opacity-30"></div>
+                                         <div class="absolute bottom-0 w-full h-[100px] bg-gradient-to-t from-black/60 to-transparent"></div>
                                      </div>
 
                                  </div>
 
-                                 <!-- Motor Sound Indicator -->
-                                 <div v-if="isAnimating && motorType !== 'manual'" class="absolute top-8 right-8 px-3 py-1 bg-black/80 rounded-full flex items-center gap-2 z-30">
-                                    <div class="w-2 h-2 bg-green-500 rounded-full animate-ping"></div>
-                                    <span class="text-[10px] font-mono uppercase text-gray-300">Motor Active</span>
+                                 <!-- Индикатор мотора -->
+                                 <div v-if="isAnimating && motorType !== 'manual'" class="absolute top-8 right-8 px-3 py-1 bg-black/80 rounded-full flex items-center gap-2 z-30 border border-white/10 backdrop-blur">
+                                    <div class="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping"></div>
+                                    <span class="text-[10px] font-mono uppercase text-gray-300 tracking-wider">Привод активен</span>
                                  </div>
                             </div>
                         </div>
-
-                    </div>
-                </div>
 
                 <!-- Slide 4: Call to Action -->
                 <div class="flex h-full w-screen items-center justify-center bg-red-600 text-white relative">
