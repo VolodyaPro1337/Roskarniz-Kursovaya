@@ -101,10 +101,15 @@ onMounted(() => {
         
         <!-- СЕКЦИЯ 1: "Шторы" (Canvas Sequence) -->
         <!-- Высота 200vh дает место для разгона анимации -->
-        <div ref="sequenceContainer" class="relative h-[200vh] w-full"> 
-            <canvas ref="canvasRef" class="absolute inset-0 h-full w-full object-cover z-0"></canvas>
+        <!-- СЕКЦИЯ 1: "Шторы" (Static Hero) -->
+        <div class="relative h-screen w-full overflow-hidden"> 
+            <!-- Background Image -->
+            <img src="/images/hero-bg.png" alt="Background" class="absolute inset-0 h-full w-full object-cover z-0 opacity-50" />
             
-            <!-- Контент, который висит поверх штор -->
+            <!-- Overlay Gradient -->
+            <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/90 z-0"></div>
+
+            <!-- Контент -->
             <div class="absolute inset-0 z-10 flex flex-col items-center justify-center pointer-events-none">
                  <h1 ref="heroText" class="text-center mix-blend-difference">
                     <span class="block text-[15vw] font-black leading-none tracking-tighter text-white opacity-80">
@@ -116,8 +121,9 @@ onMounted(() => {
                 </h1>
             </div>
 
-            <div class="absolute bottom-10 w-full text-center z-20 animate-pulse">
-                <p class="text-xs uppercase tracking-widest text-white/50">Скролльте, чтобы открыть</p>
+            <div class="absolute bottom-10 w-full text-center z-20 animate-bounce">
+                <p class="text-xs uppercase tracking-widest text-white/50">Скролльте вниз</p>
+                <svg class="w-6 h-6 mx-auto text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
             </div>
         </div>
 
