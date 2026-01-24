@@ -12,6 +12,10 @@ Route::get('/catalog', function () {
     return Inertia::render('Catalog');
 })->name('catalog');
 
+Route::get('/atelier', function () {
+    return Inertia::render('Atelier');
+})->name('atelier');
+
 Route::get('dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
