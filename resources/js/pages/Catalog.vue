@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import { ref, reactive, computed, watch } from 'vue';
-import Navigation from '@/Components/Navigation.vue';
-import CustomCursor from '@/Components/CustomCursor.vue';
+import Navigation from '@/components/Navigation.vue';
+import CustomCursor from '@/components/CustomCursor.vue';
 import gsap from 'gsap';
 
-// --- State ---
+// --- Состояние ---
 const showQuiz = ref(true); 
 const currentStep = ref(0);
 
-// --- Filters State ---
+// --- Состояние фильтров ---
 const filters = reactive({
     search: '',
     category: 'all',
@@ -20,7 +20,7 @@ const filters = reactive({
     material: [] as string[]
 });
 
-// --- Quiz Logic (Functional) ---
+// --- Логика Квиза (Функционал) ---
 const quizQuestions = [
     {
         key: 'room',
@@ -43,7 +43,7 @@ const quizQuestions = [
         ]
     },
     {
-        key: 'style', // Just for preference, maybe implies Material/Color later
+        key: 'style', // Просто для предпочтения, возможно влияет на Материал/Цвет
         question: "Предпочтительный стиль?",
         options: [
             { label: "Минимализм", value: "minimal", icon: "⬜" },
@@ -57,14 +57,14 @@ const quizQuestions = [
 const selectQuizOption = (questionIndex: number, value: string) => {
     const question = quizQuestions[questionIndex];
     
-    // Auto-apply filter
+    // Авто-применение фильтра
     if (question.key === 'room') {
         if (!filters.room.includes(value)) filters.room.push(value);
     } else if (question.key === 'opacity') {
         if (!filters.opacity.includes(value)) filters.opacity.push(value);
     }
     
-    // Next Step
+    // Следующий шаг
     if (currentStep.value < quizQuestions.length - 1) {
         currentStep.value++;
     } else {
@@ -73,15 +73,15 @@ const selectQuizOption = (questionIndex: number, value: string) => {
 };
 
 const finishQuiz = () => {
-    // Animate out
-    gsap.to('.quiz-overlay', { opacity: 0, duration: 0.5, onComplete: () => showQuiz.value = false });
+    // Анимация выхода
+    gsap.to('.quiz-overlay', { opacity: 0, duration: 0.5, onComplete: () => { showQuiz.value = false; } });
 };
 
 const skipQuiz = () => {
-    gsap.to('.quiz-overlay', { opacity: 0, duration: 0.5, onComplete: () => showQuiz.value = false });
+    gsap.to('.quiz-overlay', { opacity: 0, duration: 0.5, onComplete: () => { showQuiz.value = false; } });
 };
 
-// --- Mock Data ---
+// --- Моковые данные ---
 const categories = [
     { id: 'all', name: 'Все категории' },
     { id: 'curtains', name: 'Портьеры' },
@@ -120,13 +120,13 @@ const products = ref([
     { id: 6, name: 'Kids Dream', price: '9 900 ₽', category: 'curtains', opacity: 'dimout', room: 'kids', image: '/images/product-1.jpg' },
 ]);
 
-// Computed Filtered Products
+// Вычисляемые отфильтрованные товары
 const filteredProducts = computed(() => {
     return products.value.filter(p => {
         if (filters.category !== 'all' && p.category !== filters.category) return false;
         if (filters.opacity.length && !filters.opacity.includes(p.opacity)) return false;
         if (filters.room.length && !filters.room.includes(p.room)) return false;
-        // Search logic placeholder
+        // Заглушка логики поиска
         return true;
     });
 });
@@ -139,18 +139,18 @@ const filteredProducts = computed(() => {
 
     <div class="min-h-screen bg-[#050505] text-white selection:bg-white selection:text-black overflow-x-hidden pt-24 font-sans">
         
-        <!-- QUIZ OVERLAY -->
+        <!-- ОВЕРЛЕЙ КВИЗА -->
         <div v-if="showQuiz" class="quiz-overlay fixed inset-0 z-[60] bg-black flex items-center justify-center p-4">
-            <!-- Background effects -->
+            <!-- Фоновые эффекты -->
             <div class="absolute inset-0 overflow-hidden pointer-events-none">
                 <div class="absolute top-0 left-1/4 w-[500px] h-[500px] bg-white/5 rounded-full blur-[120px]"></div>
                 <div class="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-white/5 rounded-full blur-[120px]"></div>
-                <!-- Noise -->
+                <!-- Шум -->
                 <div class="absolute inset-0 bg-[url('/images/noise.png')] opacity-10 mix-blend-overlay"></div>
             </div>
 
             <div class="max-w-4xl w-full relative z-10">
-                <!-- Progress -->
+                <!-- Прогресс -->
                 <div class="flex items-center gap-4 mb-16">
                     <span class="text-xs font-mono text-gray-500">STEP 0{{ currentStep + 1 }}</span>
                     <div class="flex-1 h-[1px] bg-white/10 relative">
@@ -159,7 +159,7 @@ const filteredProducts = computed(() => {
                     <span class="text-xs font-mono text-gray-500">03</span>
                 </div>
 
-                <!-- Content -->
+                <!-- Контент -->
                 <div class="space-y-12">
                      <h2 class="text-5xl md:text-7xl font-bold tracking-tighter leading-none">
                         {{ quizQuestions[currentStep].question }}
@@ -177,13 +177,13 @@ const filteredProducts = computed(() => {
                                 <span class="block text-lg font-bold mb-1">{{ option.label }}</span>
                                 <span class="text-xs text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0 duration-300 block">Выбрать</span>
                             </div>
-                            <!-- Subtle Glow -->
+                            <!-- Легкое свечение -->
                             <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
                         </button>
                     </div>
                 </div>
 
-                <!-- Footer Actions -->
+                <!-- Футер действия -->
                 <div class="mt-16 flex justify-between items-center border-t border-white/10 pt-8">
                      <button @click="skipQuiz" class="text-sm text-gray-500 hover:text-white transition-colors cursor-hover uppercase tracking-widest text-[10px]">
                         Пропустить опрос
@@ -195,14 +195,14 @@ const filteredProducts = computed(() => {
             </div>
         </div>
 
-        <!-- MAIN LAYOUT -->
+        <!-- ОСНОВНОЙ МАКЕТ -->
         <div class="flex min-h-[calc(100vh-96px)]">
             
-            <!-- SIDEBAR FILTERS -->
+            <!-- БОКОВАЯ ПАНЕЛЬ ФИЛЬТРОВ -->
             <aside class="w-80 hidden xl:block border-r border-white/5 bg-[#050505] p-8 pb-32 overflow-y-auto fixed h-full z-10 custom-scrollbar">
                 <div class="space-y-12">
                     
-                    <!-- Search -->
+                    <!-- Поиск -->
                     <div class="relative group">
                         <input 
                             v-model="filters.search"
@@ -213,7 +213,7 @@ const filteredProducts = computed(() => {
                         <svg class="w-4 h-4 text-gray-600 absolute right-0 top-1/2 -translate-y-1/2 group-focus-within:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </div>
 
-                    <!-- Categories -->
+                    <!-- Категории -->
                     <div>
                         <h3 class="text-xs font-mono text-gray-500 mb-6 uppercase tracking-wider">Категории</h3>
                         <div class="space-y-1">
@@ -230,7 +230,7 @@ const filteredProducts = computed(() => {
                         </div>
                     </div>
 
-                    <!-- Filter: Opacity -->
+                    <!-- Фильтр: Прозрачность -->
                     <div>
                         <h3 class="text-xs font-mono text-gray-500 mb-6 uppercase tracking-wider">Светопроницаемость</h3>
                         <div class="space-y-3">
@@ -244,7 +244,7 @@ const filteredProducts = computed(() => {
                         </div>
                     </div>
 
-                     <!-- Filter: Room -->
+                     <!-- Фильтр: Комната -->
                     <div>
                         <h3 class="text-xs font-mono text-gray-500 mb-6 uppercase tracking-wider">Комната</h3>
                         <div class="space-y-3">
@@ -258,7 +258,7 @@ const filteredProducts = computed(() => {
                         </div>
                     </div>
 
-                     <!-- Filter: Color -->
+                     <!-- Фильтр: Цвет -->
                     <div>
                         <h3 class="text-xs font-mono text-gray-500 mb-6 uppercase tracking-wider">Цвет</h3>
                         <div class="grid grid-cols-5 gap-2">
@@ -278,10 +278,10 @@ const filteredProducts = computed(() => {
                 </div>
             </aside>
 
-            <!-- GRID AREA -->
+            <!-- ОБЛАСТЬ СЕТКИ -->
             <main class="flex-1 xl:ml-80 p-8 md:p-12 relative z-0">
                 
-                <!-- HEADER -->
+                <!-- ЗАГОЛОВОК -->
                 <div class="flex flex-col md:flex-row justify-between items-end mb-12 gap-6 border-b border-white/5 pb-8">
                     <div>
                         <h1 class="text-4xl font-bold mb-2 tracking-tight">Каталог</h1>
@@ -299,31 +299,31 @@ const filteredProducts = computed(() => {
                     </div>
                 </div>
                 
-                <!-- GRID -->
+                <!-- СЕТКА -->
                  <div v-if="filteredProducts.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-x-6 gap-y-12">
                     <div 
                         v-for="product in products" 
                         :key="product.id"
                         class="group cursor-hover"
                     >
-                        <!-- Image -->
+                        <!-- Изображение -->
                         <div class="aspect-[3/4] bg-[#141416] rounded-xl overflow-hidden relative mb-6">
                             <div class="absolute inset-0 bg-white/5 animate-pulse" v-if="!product.image"></div>
-                            <!-- Image overlay gradient -->
+                            <!-- Градиент наложения изображения -->
                             <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity"></div>
                             
-                            <!-- Badges -->
+                            <!-- Бейджи -->
                             <div class="absolute top-4 left-4 flex gap-2">
                                 <span v-if="product.opacity === 'blackout'" class="px-2 py-1 bg-black/50 backdrop-blur border border-white/10 rounded text-[10px] uppercase font-bold tracking-wider">Blackout</span>
                             </div>
 
-                            <!-- Buttons -->
+                            <!-- Кнопки -->
                             <button class="absolute bottom-4 right-4 w-10 h-10 bg-white text-black rounded-full flex items-center justify-center opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 shadow-lg hover:scale-110">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                             </button>
                         </div>
 
-                        <!-- Info -->
+                        <!-- Информация -->
                         <div>
                             <div class="flex justify-between items-start mb-1">
                                 <h3 class="text-lg font-medium group-hover:underline decoration-1 underline-offset-4">{{ product.name }}</h3>
@@ -334,7 +334,7 @@ const filteredProducts = computed(() => {
                     </div>
                  </div>
 
-                 <!-- Empty State -->
+                 <!-- Пустое состояние -->
                  <div v-else class="py-20 text-center">
                     <p class="text-2xl font-bold text-gray-600 mb-4">Ничего не найдено</p>
                     <button @click="Object.assign(filters, { opacity: [], room: [], color: [], category: 'all' })" class="text-white border-b border-white pb-1 hover:text-gray-300 transition-colors">Сбросить фильтры</button>
