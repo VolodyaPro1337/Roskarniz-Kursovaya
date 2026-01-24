@@ -4,15 +4,15 @@ import { onMounted, ref } from 'vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-import Navigation from '@/Components/Navigation.vue';
-import CustomCursor from '@/Components/CustomCursor.vue';
+import Navigation from '@/components/Navigation.vue';
+import CustomCursor from '@/components/CustomCursor.vue';
 
 gsap.registerPlugin(ScrollTrigger);
 
 const heroText = ref<HTMLElement | null>(null);
 const glassCard = ref<HTMLElement | null>(null);
 const canvasRef = ref<HTMLCanvasElement | null>(null); 
-// Sequence Logic Removed (Placeholder)
+// Логика последовательности удалена (Заглушка)
 const horizontalContainer = ref<HTMLElement | null>(null);
 
 // --- Реактивный стейт конфигуратора ---
@@ -76,8 +76,8 @@ watch(openPercentage, (newVal) => {
         duration: duration,
         // Более плавная и "тяжелая" физика для премиум штор
         ease: "power2.inOut", 
-        onStart: () => isAnimating.value = true,
-        onComplete: () => isAnimating.value = false
+        onStart: () => { isAnimating.value = true; },
+        onComplete: () => { isAnimating.value = false; }
     });
 });
 
@@ -125,7 +125,7 @@ onMounted(() => {
 
     <div class="bg-[#0f0f11] text-white selection:bg-red-500 selection:text-white overflow-x-hidden cursor-none">
         
-        <!-- СЕКЦИЯ 1: Hero -->
+        <!-- СЕКЦИЯ 1: Главный экран -->
         <div class="relative h-screen w-full overflow-hidden"> 
             <img src="/images/hero-bg.png" alt="Background" class="absolute inset-0 h-full w-full object-cover z-0 opacity-50" />
             <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/90 z-0"></div>
@@ -149,7 +149,7 @@ onMounted(() => {
         <div id="horizontal-wrapper" class="relative h-screen overflow-hidden bg-white text-black">
             <div ref="horizontalContainer" class="flex h-full w-[400vw]">
                 
-                <!-- Slide 1: Intro -->
+                <!-- Слайд 1: Вступление -->
                 <div class="flex h-full w-screen items-center justify-center bg-black text-white relative border-r border-white/10">
                     <div class="absolute top-20 left-20 text-9xl font-bold opacity-10">01</div>
                     <div class="max-w-4xl px-10 relative z-10">
@@ -164,7 +164,7 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <!-- Slide 2: Gallery -->
+                <!-- Слайд 2: Галерея -->
                 <div class="relative flex h-full w-screen items-center bg-[#1a1a1a] text-white overflow-hidden">
                      <div class="absolute top-10 right-10 text-9xl font-bold opacity-10">02</div>
                      <div class="absolute top-[20%] left-[10%] w-[400px] p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md">
@@ -180,13 +180,13 @@ onMounted(() => {
                      </div>
                 </div>
 
-                <!-- Slide 3: ADVANCED INTERACTIVE SIMULATOR -->
+                <!-- Слайд 3: Продвинутый интерактивный симулятор -->
                 <div class="flex h-full w-screen items-center justify-center bg-gray-900 text-white relative">
                     <div class="absolute top-10 left-10 text-9xl font-bold opacity-10">03</div>
                     
                     <div class="flex w-full max-w-7xl gap-16 items-start h-[70vh]">
                         
-                        <!-- Controls Panel -->
+                        <!-- Панель управления -->
                         <div class="w-1/3 h-full flex flex-col justify-between bg-white/5 p-8 rounded-3xl border border-white/10 backdrop-blur-sm overflow-y-auto custom-scrollbar">
                             <div>
                                 <h3 class="text-3xl font-bold mb-2">Конфигуратор</h3>
@@ -272,7 +272,7 @@ onMounted(() => {
                                 </div>
                             </div>
 
-                            <!-- Footer -->
+                            <!-- Футер -->
                             <div class="mt-8 pt-6 border-t border-white/10">
                                 <div class="flex justify-between items-end">
                                     <div>
@@ -353,21 +353,46 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <!-- Slide 4: Call to Action -->
-                <div class="flex h-full w-screen items-center justify-center bg-red-600 text-white relative">
-                    <div class="text-center">
-                        <h2 class="text-[8vw] font-black leading-none mb-10">ХОЧУ <br> ТАК ЖЕ</h2>
-                         <button class="px-12 py-6 bg-black text-white rounded-full text-2xl font-bold hover:scale-110 transition-transform">
-                            Оформить заявку
+                <!-- Слайд 4: Призыв к действию (Переработанный) -->
+                <div class="flex h-full w-screen items-center justify-center bg-[#0a0a0a] text-white relative border-l border-white/5">
+                    <!-- Фоновые визуалы -->
+                    <div class="absolute inset-0 overflow-hidden">
+                        <div class="absolute -top-[20%] -left-[10%] w-[60vw] h-[60vw] bg-red-900/10 rounded-full blur-[120px] animate-pulse"></div>
+                        <div class="absolute bottom-0 right-0 w-[40vw] h-[40vw] bg-blue-900/5 rounded-full blur-[100px]"></div>
+                    </div>
+
+                    <div class="text-center relative z-10">
+                        <h2 class="text-[6vw] font-black leading-none mb-4 mix-blend-difference cursor-hover" data-movement="20">
+                            ВАШ ДОМ <br>
+                            <span class="text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-400 to-gray-600">ЗАСЛУЖИВАЕТ</span>
+                        </h2>
+                        
+                        <p class="text-gray-400 max-w-xl mx-auto mb-12 text-lg">
+                            Индивидуальный пошив, моторизация и монтаж под ключ. <br>
+                            Оставьте заявку, и мы привнесем магию в ваш интерьер.
+                        </p>
+
+                         <button class="group relative px-12 py-6 bg-transparent rounded-full overflow-hidden border border-white/20 hover:border-white/50 transition-colors cursor-hover">
+                            <div class="absolute inset-0 bg-white translate-y-[100%] group-hover:translate-y-0 transition-transform duration-500 ease-in-out z-0"></div>
+                            <span class="relative z-10 text-xl font-bold group-hover:text-black transition-colors duration-300">ОФОРМИТЬ ЗАЯВКУ</span>
                         </button>
+
+                        <div class="mt-12 flex gap-8 justify-center opacity-30 text-xs tracking-[0.2em]">
+                            <span>PREMIUM TEXTILES</span> <span>•</span> <span>SMART SYSTEMS</span>
+                        </div>
                     </div>
                 </div>
 
             </div>
         </div>
 
-        <!-- Footer (Simple) -->
-        <div class="bg-black py-20 text-center text-white/30 text-sm">
+        <!-- Наложение шума -->
+        <div class="fixed inset-0 pointer-events-none z-[9999] opacity-[0.03] mix-blend-overlay" 
+             style="background-image: url('/images/noise.png');">
+        </div>
+
+        <!-- Футер (Простой) -->
+        <div class="bg-black py-20 text-center text-white/30 text-sm border-t border-white/5">
             <p>ROSKARNIZ IS © 2026. DESIGNED BY ANTIGRAVITY.</p>
         </div>
 

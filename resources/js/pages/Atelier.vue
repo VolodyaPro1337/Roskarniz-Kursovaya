@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import { onMounted, ref } from 'vue';
-import Navigation from '@/Components/Navigation.vue';
-import CustomCursor from '@/Components/CustomCursor.vue';
+import Navigation from '@/components/Navigation.vue';
+import CustomCursor from '@/components/CustomCursor.vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
 
-// --- Process Scroll Story Data ---
+// --- Данные для истории прокрутки (Процесс) ---
 const processSteps = [
     { id: 1, title: 'Замер', description: 'Наши эксперты приезжают с образцами и лазерной точностью.', icon: '📏' },
     { id: 2, title: 'Эскиз', description: 'Создаем визуализацию в интерьере до начала работ.', icon: '✏️' },
@@ -18,10 +18,10 @@ const processSteps = [
 
 const processContainer = ref<HTMLElement | null>(null);
 
-// --- Portfolio Before/After State ---
+// --- Состояние портфолио (До/После) ---
 const sliderValue = ref(50);
 
-// --- Moodboard State ---
+// --- Состояние Мудборда ---
 const selectedStyles = ref<string[]>([]);
 const styles = [
     { id: 'minimal', name: 'Минимализм', color: '#f5f5f5' },
@@ -39,7 +39,7 @@ const toggleStyle = (id: string) => {
 };
 
 onMounted(() => {
-    // Process Horizontal Scroll
+    // Горизонтальная прокрутка процесса
     if (processContainer.value) {
         gsap.to(processContainer.value, {
             x: () => -(processContainer.value!.scrollWidth - window.innerWidth),
@@ -62,7 +62,7 @@ onMounted(() => {
 
     <div class="bg-[#050505] text-white selection:bg-white selection:text-black overflow-x-hidden font-sans">
         
-        <!-- HERO -->
+        <!-- ГЛАВНЫЙ ЭКРАН -->
         <div class="h-screen flex items-center justify-center relative overflow-hidden">
             <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1540553016722-983e48a2cd10?q=80&w=2544&auto=format&fit=crop')] bg-cover bg-center opacity-30"></div>
             <div class="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-black/50"></div>
@@ -78,7 +78,7 @@ onMounted(() => {
             </div>
         </div>
 
-        <!-- 1. PROCESS SCROLL STORY -->
+        <!-- 1. ИСТОРИЯ ПРОЦЕССА -->
         <section id="process-section" class="h-screen overflow-hidden flex flex-col justify-center border-t border-white/5 bg-[#0a0a0a] relative">
             <div class="absolute top-10 left-10 z-10">
                 <h2 class="text-4xl font-bold">Процесс создания</h2>
@@ -99,27 +99,27 @@ onMounted(() => {
                         <p class="text-xl text-gray-400">{{ step.description }}</p>
                     </div>
 
-                    <!-- Visual Placeholder (Line Art) -->
+                    <!-- Визуальная заглушка (Линейный рисунок) -->
                     <div class="absolute inset-0 opacity-20 pointer-events-none">
-                        <!-- Add SVG patterns here later -->
+                        <!-- Добавить SVG-паттерны позже -->
                     </div>
                 </div>
-                <!-- Final Spacer -->
+                <!-- Финальный отступ -->
                 <div class="w-[20vw]"></div>
             </div>
         </section>
 
-        <!-- 2. PORTFOLIO BEFORE/AFTER -->
+        <!-- 2. ПОРТФОЛИО ДО/ПОСЛЕ -->
         <section class="py-32 px-4 md:px-20 bg-black relative">
             <h2 class="text-4xl md:text-5xl font-bold mb-20 text-center">Преображение</h2>
             
             <div class="max-w-6xl mx-auto h-[600px] relative rounded-3xl overflow-hidden cursor-ew-resize select-none group border border-white/10">
-                <!-- After Image (Base) -->
+                <!-- Изображение ПОСЛЕ (Базовое) -->
                 <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1513694203232-719a280e022f?q=80&w=2669&auto=format&fit=crop');">
                     <div class="absolute top-10 right-10 bg-black/50 backdrop-blur px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider">После</div>
                 </div>
 
-                <!-- Before Image (Clipped) -->
+                <!-- Изображение ДО (Обрезанное) -->
                 <div 
                     class="absolute inset-0 bg-cover bg-center border-r-2 border-white"
                     :style="{ width: sliderValue + '%', backgroundImage: 'url(\'https://images.unsplash.com/photo-1595428774223-ef52624120d2?q=80&w=2574&auto=format&fit=crop\')' }"
@@ -127,7 +127,7 @@ onMounted(() => {
                     <div class="absolute top-10 left-10 bg-black/50 backdrop-blur px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider">До</div>
                 </div>
 
-                <!-- Slider Handle -->
+                <!-- Ручка слайдера -->
                 <input 
                     type="range" 
                     min="0" 
@@ -144,11 +144,11 @@ onMounted(() => {
             </div>
         </section>
 
-        <!-- 3. MOODBOARD CREATOR -->
+        <!-- 3. КОНСТРУКТОР МУДБОРДА -->
         <section class="py-32 bg-[#0a0a0a] border-t border-white/5">
             <div class="max-w-7xl mx-auto px-4">
                 <div class="flex flex-col md:flex-row gap-16">
-                    <!-- Text -->
+                    <!-- Текст -->
                     <div class="md:w-1/3">
                         <h2 class="text-4xl font-bold mb-6">Создайте свое настроение</h2>
                         <p class="text-gray-400 mb-8">
@@ -173,7 +173,7 @@ onMounted(() => {
                         </div>
                     </div>
 
-                    <!-- Interactive Grid -->
+                    <!-- Интерактивная сетка -->
                     <div class="md:w-2/3 grid grid-cols-2 gap-4">
                         <div 
                             v-for="style in styles" 
@@ -183,7 +183,7 @@ onMounted(() => {
                             :class="selectedStyles.includes(style.id) ? 'border-white scale-[0.98]' : 'border-transparent opacity-60 hover:opacity-100'"
                         >
                             <div class="absolute inset-0 bg-gray-800" :style="{ backgroundColor: style.color }"></div>
-                             <!-- Placeholder patterns -->
+                             <!-- Заглушки паттернов -->
                              <div class="absolute inset-0 opacity-20 bg-[url('/images/noise.png')] mix-blend-overlay"></div>
                              
                              <div class="absolute bottom-6 left-6 z-10">
@@ -199,7 +199,7 @@ onMounted(() => {
             </div>
         </section>
 
-        <!-- FOOTER -->
+        <!-- ФУТЕР -->
         <div class="bg-black py-20 text-center text-white/30 text-sm border-t border-white/5">
              <p>ROSKARNIZ ATELIER © 2026.</p>
         </div>
