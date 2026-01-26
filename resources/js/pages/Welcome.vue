@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, computed, watch } from 'vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -22,8 +22,6 @@ const openPercentage = ref(0); // 0 = Закрыто, 100 = Открыто
 const selectedColor = ref('#1a1a1a');
 const motorType = ref('somfy'); // 'somfy', 'xiaomi', 'manual'
 const isAnimating = ref(false);
-
-import { computed, watch } from 'vue';
 
 // Константы цен
 const PRICES = {
@@ -117,11 +115,18 @@ onMounted(() => {
 });
 </script>
 
+<script lang="ts">
+import MainLayout from '@/layouts/MainLayout.vue';
+export default {
+    layout: MainLayout
+}
+</script>
+
 <template>
     <Head title="Шторы" />
 
-    <Navigation />
     <CustomCursor />
+
 
     <div class="bg-[#0f0f11] text-white selection:bg-red-500 selection:text-white overflow-x-hidden cursor-none">
         
@@ -389,11 +394,6 @@ onMounted(() => {
         <!-- Наложение шума -->
         <div class="fixed inset-0 pointer-events-none z-[9999] opacity-[0.03] mix-blend-overlay" 
              style="background-image: url('/images/noise.png');">
-        </div>
-
-        <!-- Футер (Простой) -->
-        <div class="bg-black py-20 text-center text-white/30 text-sm border-t border-white/5">
-            <p>ROSKARNIZ IS © 2026. DESIGNED BY ANTIGRAVITY.</p>
         </div>
 
     </div>

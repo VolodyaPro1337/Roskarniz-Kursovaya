@@ -63,9 +63,15 @@ const filteredArticles = computed(() => {
 });
 </script>
 
+<script lang="ts">
+import MainLayout from '@/layouts/MainLayout.vue';
+export default {
+    layout: MainLayout
+}
+</script>
+
 <template>
     <Head title="Журнал" />
-    <Navigation />
     <CustomCursor />
 
     <div class="bg-[#050505] text-white selection:bg-red-500 selection:text-white overflow-x-hidden font-sans min-h-screen">
@@ -233,10 +239,7 @@ const filteredArticles = computed(() => {
             </div>
         </section>
 
-        <!-- FOOTER -->
-        <footer class="py-12 border-t border-white/5 text-center text-xs text-gray-600 uppercase tracking-widest font-mono">
-            Roskarniz Media © 2026
-        </footer>
+
     </div>
 </template>
 

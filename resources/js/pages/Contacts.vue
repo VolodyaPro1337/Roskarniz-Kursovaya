@@ -4,9 +4,15 @@ import Navigation from '@/components/Navigation.vue';
 import CustomCursor from '@/components/CustomCursor.vue';
 </script>
 
+<script lang="ts">
+import MainLayout from '@/layouts/MainLayout.vue';
+export default {
+    layout: MainLayout
+}
+</script>
+
 <template>
     <Head title="Контакты" />
-    <Navigation />
     <CustomCursor />
 
     <div class="bg-[#050505] text-white selection:bg-white selection:text-black overflow-x-hidden font-sans min-h-screen">
