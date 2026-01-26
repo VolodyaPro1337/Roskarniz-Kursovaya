@@ -292,7 +292,7 @@ onMounted(() => {
                             <div class="h-full w-full bg-gray-800 rounded-3xl overflow-hidden shadow-2xl border-4 border-gray-700 relative">
                                  <!-- Фон: Город -->
                                  <div class="absolute inset-0 bg-cover bg-center" 
-                                      style="background-image: url('https://images.unsplash.com/photo-1519608487953-e999c9dc296f?q=80&w=2574&auto=format&fit=crop'); filter: brightness(0.6);">
+                                      style="background-image: url('/images/welcome-room.png'); filter: brightness(0.6);">
                                  </div>
                                  
                                  <!-- Рама (Стена) -->
