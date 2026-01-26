@@ -10,10 +10,10 @@ gsap.registerPlugin(ScrollTrigger);
 
 // --- Данные для истории прокрутки (Процесс) ---
 const processSteps = [
-    { id: 1, title: 'Замер', description: 'Наши эксперты приезжают с образцами и лазерной точностью.', icon: '📏' },
-    { id: 2, title: 'Эскиз', description: 'Создаем визуализацию в интерьере до начала работ.', icon: '✏️' },
-    { id: 3, title: 'Пошив', description: 'Ручная работа в нашем цеху. Идеальные швы.', icon: '🧵' },
-    { id: 4, title: 'Монтаж', description: 'Чистая установка карнизов и развеска штор.', icon: '🔨' }
+    { id: 1, title: 'Замер', description: 'Наши эксперты приезжают с образцами и лазерной точностью.', icon: '📏', image: '/images/atelier/measurement.png' },
+    { id: 2, title: 'Эскиз', description: 'Создаем визуализацию в интерьере до начала работ.', icon: '✏️', image: '/images/atelier/sketch.png' },
+    { id: 3, title: 'Пошив', description: 'Ручная работа в нашем цеху. Идеальные швы.', icon: '🧵', image: '/images/atelier/sewing.png' },
+    { id: 4, title: 'Монтаж', description: 'Чистая установка карнизов и развеска штор.', icon: '🔨', image: '/images/atelier/installation.png' }
 ];
 
 const processContainer = ref<HTMLElement | null>(null);
@@ -24,10 +24,10 @@ const sliderValue = ref(50);
 // --- Состояние Мудборда ---
 const selectedStyles = ref<string[]>([]);
 const styles = [
-    { id: 'minimal', name: 'Минимализм', color: '#f5f5f5' },
-    { id: 'classic', name: 'Классика', color: '#e5e7eb' },
-    { id: 'loft', name: 'Лофт', color: '#525252' },
-    { id: 'scandi', name: 'Сканди', color: '#d1d5db' }
+    { id: 'minimal', name: 'Минимализм', image: '/images/atelier/style_minimal.png' },
+    { id: 'classic', name: 'Классика', image: '/images/atelier/style_classic.png' },
+    { id: 'loft', name: 'Лофт', image: '/images/atelier/style_loft.png' },
+    { id: 'scandi', name: 'Сканди', image: '/images/atelier/style_scandi.png' }
 ];
 
 const toggleStyle = (id: string) => {
@@ -64,7 +64,7 @@ onMounted(() => {
         
         <!-- ГЛАВНЫЙ ЭКРАН -->
         <div class="h-screen flex items-center justify-center relative overflow-hidden">
-            <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1540553016722-983e48a2cd10?q=80&w=2544&auto=format&fit=crop')] bg-cover bg-center opacity-30"></div>
+            <div class="absolute inset-0 bg-[url('/images/atelier/hero.png')] bg-cover bg-center opacity-30"></div>
             <div class="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-black/50"></div>
             
             <div class="text-center relative z-10 px-4">
@@ -99,9 +99,9 @@ onMounted(() => {
                         <p class="text-xl text-gray-400">{{ step.description }}</p>
                     </div>
 
-                    <!-- Визуальная заглушка (Линейный рисунок) -->
-                    <div class="absolute inset-0 opacity-20 pointer-events-none">
-                        <!-- Добавить SVG-паттерны позже -->
+                    <!-- Визуальная заглушка (Фоновое изображение) -->
+                    <div class="absolute inset-0 opacity-40 pointer-events-none mix-blend-overlay">
+                        <img :src="step.image" class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" alt="" />
                     </div>
                 </div>
                 <!-- Финальный отступ -->
@@ -115,14 +115,14 @@ onMounted(() => {
             
             <div class="max-w-6xl mx-auto h-[600px] relative rounded-3xl overflow-hidden cursor-ew-resize select-none group border border-white/10">
                 <!-- Изображение ПОСЛЕ (Базовое) -->
-                <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1513694203232-719a280e022f?q=80&w=2669&auto=format&fit=crop');">
+                <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('/images/atelier/after.png');">
                     <div class="absolute top-10 right-10 bg-black/50 backdrop-blur px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider">После</div>
                 </div>
 
                 <!-- Изображение ДО (Обрезанное) -->
                 <div 
                     class="absolute inset-0 bg-cover bg-center border-r-2 border-white"
-                    :style="{ width: sliderValue + '%', backgroundImage: 'url(\'https://images.unsplash.com/photo-1595428774223-ef52624120d2?q=80&w=2574&auto=format&fit=crop\')' }"
+                    :style="{ width: sliderValue + '%', backgroundImage: 'url(\'/images/atelier/before.png\')' }"
                 >
                     <div class="absolute top-10 left-10 bg-black/50 backdrop-blur px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider">До</div>
                 </div>
@@ -182,7 +182,9 @@ onMounted(() => {
                             class="relative aspect-[4/3] rounded-2xl overflow-hidden cursor-pointer group border-2 transition-all duration-300"
                             :class="selectedStyles.includes(style.id) ? 'border-white scale-[0.98]' : 'border-transparent opacity-60 hover:opacity-100'"
                         >
-                            <div class="absolute inset-0 bg-gray-800" :style="{ backgroundColor: style.color }"></div>
+                            <div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110" :style="{ backgroundImage: `url(${style.image})` }"></div>
+                            <div class="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors duration-300"></div>
+                             
                              <!-- Заглушки паттернов -->
                              <div class="absolute inset-0 opacity-20 bg-[url('/images/noise.png')] mix-blend-overlay"></div>
                              
