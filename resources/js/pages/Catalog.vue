@@ -132,9 +132,15 @@ const filteredProducts = computed(() => {
 });
 </script>
 
+<script lang="ts">
+import MainLayout from '@/layouts/MainLayout.vue';
+export default {
+    layout: MainLayout
+}
+</script>
+
 <template>
     <Head title="Каталог" />
-    <Navigation />
     <CustomCursor />
 
     <div class="min-h-screen bg-[#050505] text-white selection:bg-white selection:text-black overflow-x-hidden pt-24 font-sans">
@@ -199,7 +205,7 @@ const filteredProducts = computed(() => {
         <div class="flex min-h-[calc(100vh-96px)]">
             
             <!-- БОКОВАЯ ПАНЕЛЬ ФИЛЬТРОВ -->
-            <aside class="w-80 hidden xl:block border-r border-white/5 bg-[#050505] p-8 pb-32 overflow-y-auto fixed h-full z-10 custom-scrollbar">
+            <aside data-lenis-prevent class="w-80 hidden xl:block border-r border-white/5 bg-[#050505] p-8 pb-32 overflow-y-auto fixed h-full z-10 custom-scrollbar">
                 <div class="space-y-12">
                     
                     <!-- Поиск -->

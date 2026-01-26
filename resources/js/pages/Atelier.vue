@@ -55,9 +55,15 @@ onMounted(() => {
 });
 </script>
 
+<script lang="ts">
+import MainLayout from '@/layouts/MainLayout.vue';
+export default {
+    layout: MainLayout
+}
+</script>
+
 <template>
     <Head title="Ателье" />
-    <Navigation />
     <CustomCursor />
 
     <div class="bg-[#050505] text-white selection:bg-white selection:text-black overflow-x-hidden font-sans">
@@ -201,10 +207,7 @@ onMounted(() => {
             </div>
         </section>
 
-        <!-- ФУТЕР -->
-        <div class="bg-black py-20 text-center text-white/30 text-sm border-t border-white/5">
-             <p>ROSKARNIZ ATELIER © 2026.</p>
-        </div>
+
 
     </div>
 </template>

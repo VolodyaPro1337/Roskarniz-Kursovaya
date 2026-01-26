@@ -26,6 +26,6 @@ Route::get('/contacts', function () {
 
 Route::get('dashboard', function () {
     return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+})->name('dashboard');
 
 require __DIR__.'/settings.php';
