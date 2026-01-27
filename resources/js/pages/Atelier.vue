@@ -38,38 +38,40 @@ const selections = ref({
     cornice: 'profile' // Default single selection
 });
 
-// Mock Data (Expanded)
-const wizardData = {
-    styles: [
-        { id: 'minimal', name: 'Минимализм', image: '/images/atelier/style_minimal.png' },
-        { id: 'classic', name: 'Классика', image: '/images/atelier/style_classic.png' },
-        { id: 'loft', name: 'Лофт', image: '/images/atelier/style_loft.png' },
-        { id: 'scandi', name: 'Сканди', image: '/images/atelier/style_scandi.png' }
-    ],
-    fabrics: [
-        { id: 'velvet', name: 'Бархат Royal', desc: 'Плотный ворс, глубокий отлив', gradient: 'linear-gradient(135deg, #372828 0%, #684e4e 100%)' },
-        { id: 'linen', name: 'Эко-Лен', desc: 'Грубая фактура, натуральность', gradient: 'linear-gradient(135deg, #e3dacd 0%, #b8ad9e 100%)' },
-        { id: 'silk', name: 'Дикий Шелк', desc: 'Мягкий блеск, струящаяся ткань', gradient: 'linear-gradient(135deg, #f5f5f5 0%, #dcdcdc 100%)' },
-        { id: 'blackout', name: 'Dimout 90%', desc: 'Защита от солнца и шума', gradient: 'linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%)' }
-    ],
-    colors: [
-        { id: 'warm_beige', name: 'Песок', hex: '#d6cdb8' },
-        { id: 'cold_grey', name: 'Графит', hex: '#374151' },
-        { id: 'accent_ruby', name: 'Рубин', hex: '#9f1239' },
-        { id: 'base_white', name: 'Молочный', hex: '#fafafa' }
-    ],
-    cornices: [
-        { id: 'profile', name: 'Профильный (Скрытый)', desc: 'Минимализм, монтаж в нишу', icon: 'M4 6h16M4 10h16M4 14h16M4 18h16' },
-        { id: 'decorative', name: 'Декоративный (Труба)', desc: 'Акцент на фурнитуру', icon: 'M2 12h20M2 12a2 2 0 012-2h16a2 2 0 012 2v0a2 2 0 01-2 2H4a2 2 0 01-2-2v0z' },
-        { id: 'electro', name: 'Электрокарниз', desc: 'Управление с пульта/Умного дома', icon: 'M13 10V3L4 14h7v7l9-11h-7z' }
-    ]
-};
+// --- Data ---
+const wizardData = ref({
+    styles: [] as any[],
+    fabrics: [] as any[],
+    colors: [] as any[],
+    cornices: [] as any[]
+});
+
+onMounted(async () => {
+    try {
+        const response = await fetch('/api/materials');
+        const data = await response.json();
+        wizardData.value = data;
+    } catch (e) {
+        console.error('Failed to load materials', e);
+    }
+
+    gsap.from('.wizard-card', {
+        y: 30,
+        opacity: 0,
+        duration: 0.8,
+        stagger: 0.1,
+        ease: 'power3.out'
+    });
+});
+/*
+// Old Hardcoded Data Removed
+*/
 
 // --- Computed Helpers ---
-const selectedStylesData = computed(() => wizardData.styles.filter(s => selections.value.styles.includes(s.id)));
-const selectedFabricsData = computed(() => wizardData.fabrics.filter(f => selections.value.fabrics.includes(f.id)));
-const selectedColorsData = computed(() => wizardData.colors.filter(c => selections.value.colors.includes(c.id)));
-const selectedCorniceData = computed(() => wizardData.cornices.find(c => c.id === selections.value.cornice));
+const selectedStylesData = computed(() => wizardData.value.styles.filter((s: any) => selections.value.styles.includes(s.id)));
+const selectedFabricsData = computed(() => wizardData.value.fabrics.filter((f: any) => selections.value.fabrics.includes(f.id)));
+const selectedColorsData = computed(() => wizardData.value.colors.filter((c: any) => selections.value.colors.includes(c.id)));
+const selectedCorniceData = computed(() => wizardData.value.cornices.find((c: any) => c.id === selections.value.cornice));
 
 // --- Logic ---
 const toggleSelection = (category: 'styles' | 'fabrics' | 'colors', id: string) => {
