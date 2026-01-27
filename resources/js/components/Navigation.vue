@@ -1,11 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { usePage, Link } from '@inertiajs/vue3';
+import { Link } from '@inertiajs/vue3';
 
-const page = usePage();
-const user = computed(() => page.props.auth.user);
-
-const emit = defineEmits(['open-auth']);
+defineEmits(['open-auth']);
 
 const links = [
     { name: 'Каталог', href: '/catalog' },
@@ -13,14 +9,6 @@ const links = [
     { name: 'Блог', href: '/blog' },
     { name: 'Контакты', href: '/contacts' },
 ];
-
-const isMenuOpen = ref(false);
-
-const handleProfileClick = () => {
-    if (!user.value) {
-        emit('open-auth');
-    }
-};
 </script>
 
 <template>

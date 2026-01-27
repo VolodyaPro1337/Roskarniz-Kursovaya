@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { onMounted, ref, computed, watch } from 'vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { onMounted, ref, computed, watch } from 'vue';
 
-import Navigation from '@/components/Navigation.vue';
 import CustomCursor from '@/components/CustomCursor.vue';
+
 
 gsap.registerPlugin(ScrollTrigger);
 
 const heroText = ref<HTMLElement | null>(null);
 const glassCard = ref<HTMLElement | null>(null);
-const canvasRef = ref<HTMLCanvasElement | null>(null); 
+ 
 // Логика последовательности удалена (Заглушка)
 const horizontalContainer = ref<HTMLElement | null>(null);
 

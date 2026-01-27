@@ -1,9 +1,9 @@
 <script setup lang="ts">
+import Lenis from '@studio-freight/lenis';
 import { onMounted, onUnmounted, ref } from 'vue';
+import AuthModal from '@/components/AuthModal.vue';
 import MegaFooter from '@/components/MegaFooter.vue';
 import Navigation from '@/components/Navigation.vue';
-import AuthModal from '@/components/AuthModal.vue';
-import Lenis from '@studio-freight/lenis';
 
 let lenis: Lenis | null = null;
 const isAuthModalOpen = ref(false);
