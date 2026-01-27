@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
-import Navigation from '@/components/Navigation.vue';
 import CustomCursor from '@/components/CustomCursor.vue';
+
 
 // --- State ---
 const activeCategory = ref('all');
 const email = ref('');
-const isHovering = ref(false);
+
 
 // --- Data ---
 const categories = [
@@ -120,7 +120,7 @@ export default {
         <main class="max-w-5xl mx-auto px-4 md:px-8 py-32 space-y-40">
             
             <!-- First Half of Articles -->
-            <template v-for="(article, index) in filteredArticles.slice(0, 2)" :key="article.id">
+            <template v-for="article in filteredArticles.slice(0, 2)" :key="article.id">
                 <article class="group relative flex flex-col items-center">
                     <!-- Image Wrapper -->
                     <div class="w-full relative cursor-pointer overflow-hidden rounded-[2rem]">
@@ -178,7 +178,7 @@ export default {
             </section>
 
             <!-- Second Half of Articles -->
-            <template v-for="(article, index) in filteredArticles.slice(2)" :key="article.id">
+            <template v-for="article in filteredArticles.slice(2)" :key="article.id">
                 <article class="group relative flex flex-col items-center">
                     <div class="w-full relative cursor-pointer overflow-hidden rounded-[2rem]">
                         <div class="aspect-[16/10] md:aspect-[21/9]">

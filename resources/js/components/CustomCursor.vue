@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
 import gsap from 'gsap';
+import { onMounted, onUnmounted, ref } from 'vue';
 
 const cursor = ref<HTMLElement | null>(null);
 const follower = ref<HTMLElement | null>(null);

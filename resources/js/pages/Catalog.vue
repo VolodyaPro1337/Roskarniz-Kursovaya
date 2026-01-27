@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { ref, reactive, computed, watch } from 'vue';
-import Navigation from '@/components/Navigation.vue';
-import CustomCursor from '@/components/CustomCursor.vue';
 import gsap from 'gsap';
+import { ref, reactive, computed } from 'vue';
+import CustomCursor from '@/components/CustomCursor.vue';
+
 
 // --- Состояние ---
 const showQuiz = ref(true); 

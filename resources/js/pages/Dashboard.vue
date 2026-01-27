@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import MainLayout from '@/layouts/MainLayout.vue';
-import { ref } from 'vue';
 
-const activeTab = ref('overview');
+import MainLayout from '@/layouts/MainLayout.vue';
+
+
 
 // Mock Data
 const user = {
