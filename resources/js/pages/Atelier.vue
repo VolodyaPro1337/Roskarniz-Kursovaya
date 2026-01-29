@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { onMounted, ref, computed, nextTick } from 'vue';
-import Navigation from '@/components/Navigation.vue';
-import CustomCursor from '@/components/CustomCursor.vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import MainLayout from '@/layouts/MainLayout.vue';
+import { onMounted, ref, computed, nextTick } from 'vue';
+
 
 gsap.registerPlugin(ScrollTrigger);
 

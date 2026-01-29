@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import Navigation from '@/components/Navigation.vue';
 import CustomCursor from '@/components/CustomCursor.vue';
 </script>
 
