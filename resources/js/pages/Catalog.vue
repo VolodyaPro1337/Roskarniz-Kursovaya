@@ -5,7 +5,7 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import CustomCursor from '@/components/CustomCursor.vue';
 import axios from 'axios';
 import { watchDebounced } from '@vueuse/core';
-import MainLayout from '@/Layouts/MainLayout.vue';
+import MainLayout from '@/layouts/MainLayout.vue';
 
 defineOptions({ layout: MainLayout });
 
