@@ -4,7 +4,7 @@ import CustomCursor from '@/components/CustomCursor.vue';
 </script>
 
 <script lang="ts">
-import MainLayout from '@/Layouts/MainLayout.vue';
+import MainLayout from '@/layouts/MainLayout.vue';
 export default {
     layout: MainLayout
 }

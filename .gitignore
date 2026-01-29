@@ -12,6 +12,9 @@ Thumbs.db
 /npm-debug.log
 /yarn-error.log
 
+# Bot
+/bot
+
 # Laravel
 /vendor
 /.env
