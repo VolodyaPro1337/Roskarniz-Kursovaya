@@ -44,13 +44,23 @@ const wizardData = ref({
     cornices: [] as any[]
 });
 
+// Состояния загрузки и ошибок
+const isLoadingMaterials = ref(true);
+const loadError = ref('');
+
 onMounted(async () => {
     try {
         const response = await fetch('/api/materials');
+        if (!response.ok) {
+            throw new Error(`Ошибка загрузки: ${response.status}`);
+        }
         const data = await response.json();
         wizardData.value = data;
-    } catch (e) {
+    } catch (e: any) {
         console.error('Failed to load materials', e);
+        loadError.value = e.message || 'Не удалось загрузить материалы. Проверьте соединение.';
+    } finally {
+        isLoadingMaterials.value = false;
     }
 
     gsap.from('.wizard-card', {
@@ -166,9 +176,62 @@ const timeline = computed(() => {
     ];
 });
 
+// --- Сохранение заказа в БД ---
+const saveOrder = async () => {
+    // Собираем все выбранные материалы (slug'и)
+    const allMaterials = [
+        ...selections.value.styles,
+        ...selections.value.fabrics,
+        ...selections.value.colors,
+        selections.value.cornice
+    ].filter(Boolean);
+    
+    if (allMaterials.length === 0) {
+        return null; // Нечего сохранять
+    }
+    
+    try {
+        const response = await fetch('/api/orders', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-XSRF-TOKEN': document.cookie
+                    .split('; ')
+                    .find(row => row.startsWith('XSRF-TOKEN='))
+                    ?.split('=')[1] || ''
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                materials: allMaterials,
+                total_price: priceBreakdown.value.total,
+                complexity: complexityLevel.value.level,
+                estimated_days: complexityLevel.value.days,
+                guest_info: null // Можно добавить форму сбора контактов
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            console.error('Order save error:', error);
+            return null;
+        }
+        
+        const data = await response.json();
+        console.log('Order saved:', data.order_id);
+        return data.order_id;
+    } catch (e) {
+        console.error('Failed to save order:', e);
+        return null;
+    }
+};
+
 // --- PDF Generation (html2canvas + hidden div) ---
 const generatePDF = async () => {
     isGeneratingPDF.value = true;
+    
+    // Сохраняем заказ в БД перед генерацией PDF
+    const orderId = await saveOrder();
     
     try {
         // Создаем скрытый контейнер для рендера
@@ -189,7 +252,7 @@ const generatePDF = async () => {
         document.body.appendChild(container);
         
         const date = new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
-        const orderId = Math.floor(Math.random() * 10000);
+        const pdfOrderId = orderId || Math.floor(Math.random() * 10000); // Используем сохранённый ID или временный
         const prices = priceBreakdown.value;
         const complexity = complexityLevel.value;
         const timelineData = timeline.value;
@@ -244,7 +307,7 @@ const generatePDF = async () => {
                 <div style="text-align: right; font-size: 11px;">
                     <div style="font-weight: 600;">Концепция интерьера</div>
                     <div style="opacity: 0.7; margin-top: 2px;">${date}</div>
-                    <div style="opacity: 0.5; margin-top: 2px;">ID: #${orderId}</div>
+                    <div style="opacity: 0.5; margin-top: 2px;">ID: #${pdfOrderId}</div>
                 </div>
             </div>
             
@@ -377,7 +440,7 @@ const generatePDF = async () => {
         });
         
         pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width / 2, canvas.height / 2);
-        pdf.save(`Roskarniz_Concept_${orderId}.pdf`);
+        pdf.save(`Roskarniz_Concept_${pdfOrderId}.pdf`);
         
         // Удаляем контейнер
         document.body.removeChild(container);
