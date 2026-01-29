@@ -319,6 +319,8 @@ onMounted(() => {
 </script>
 
 <script lang="ts">
+import MainLayout from '@/Layouts/MainLayout.vue';
+
 export default {
     layout: MainLayout
 }
