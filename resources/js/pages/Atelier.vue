@@ -2,6 +2,7 @@
 import { Head } from '@inertiajs/vue3';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { onMounted, ref, computed, nextTick } from 'vue';
 
@@ -131,155 +132,259 @@ const prevStep = () => {
     if (step.value > 1) step.value--;
 };
 
-// --- PDF Generation (Native jsPDF without iframe/html2canvas) ---
+// --- Расчет сложности и таймлайна ---
+const complexityLevel = computed(() => {
+    const stylesCount = selectedStylesData.value.length;
+    const fabricsCount = selectedFabricsData.value.length;
+    const colorsCount = selectedColorsData.value.length;
+    
+    const score = stylesCount * 2 + fabricsCount * 1.5 + colorsCount;
+    
+    if (score <= 3) return { level: 'Простой', days: 7, color: '#22c55e' };
+    if (score <= 6) return { level: 'Средний', days: 14, color: '#eab308' };
+    if (score <= 10) return { level: 'Сложный', days: 21, color: '#f97316' };
+    return { level: 'Премиум', days: 30, color: '#ef4444' };
+});
+
+const timeline = computed(() => {
+    const complexity = complexityLevel.value;
+    const today = new Date();
+    
+    const addDays = (date: Date, days: number) => {
+        const result = new Date(date);
+        result.setDate(result.getDate() + days);
+        return result;
+    };
+    
+    const formatDate = (date: Date) => date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    
+    return [
+        { stage: 'Замер и согласование', start: formatDate(today), end: formatDate(addDays(today, 2)), days: 2 },
+        { stage: 'Закупка материалов', start: formatDate(addDays(today, 3)), end: formatDate(addDays(today, 5)), days: 3 },
+        { stage: 'Пошив и ВТО', start: formatDate(addDays(today, 6)), end: formatDate(addDays(today, 6 + Math.ceil(complexity.days * 0.5))), days: Math.ceil(complexity.days * 0.5) },
+        { stage: 'Монтаж и сдача', start: formatDate(addDays(today, 7 + Math.ceil(complexity.days * 0.5))), end: formatDate(addDays(today, complexity.days)), days: 2 }
+    ];
+});
+
+// --- PDF Generation (html2canvas + hidden div) ---
 const generatePDF = async () => {
     isGeneratingPDF.value = true;
     
     try {
+        // Создаем скрытый контейнер для рендера
+        const container = document.createElement('div');
+        container.id = 'pdf-render-container';
+        Object.assign(container.style, {
+            position: 'fixed',
+            left: '-9999px',
+            top: '0',
+            width: '794px', // A4 width at 96dpi
+            background: '#fff',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            fontSize: '12px',
+            color: '#000',
+            padding: '0',
+            zIndex: '-1'
+        });
+        document.body.appendChild(container);
+        
+        const date = new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+        const orderId = Math.floor(Math.random() * 10000);
+        const prices = priceBreakdown.value;
+        const complexity = complexityLevel.value;
+        const timelineData = timeline.value;
+        
+        // Мудборд стили
+        const stylesHtml = selectedStylesData.value.map((s: any) => `
+            <div style="flex: 0 0 calc(50% - 8px); aspect-ratio: 4/3; position: relative; border-radius: 8px; overflow: hidden; border: 1px solid #e5e5e5;">
+                <img src="${s.image}" style="width: 100%; height: 100%; object-fit: cover;" crossorigin="anonymous">
+                <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: #fff; padding: 8px; font-size: 11px; font-weight: 600; text-transform: uppercase;">${s.name}</div>
+            </div>
+        `).join('') || '<div style="flex: 1; padding: 40px; text-align: center; color: #999; background: #f5f5f5; border-radius: 8px;">Стили не выбраны</div>';
+        
+        // Палитра цветов
+        const colorsHtml = selectedColorsData.value.map((c: any) => `
+            <div style="text-align: center;">
+                <div style="width: 36px; height: 36px; border-radius: 50%; background: ${c.hex}; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.15); margin: 0 auto 6px;"></div>
+                <div style="font-size: 9px; color: #666;">${c.name}</div>
+            </div>
+        `).join('') || '<div style="color: #999;">Не выбраны</div>';
+        
+        // Ткани
+        const fabricsHtml = selectedFabricsData.value.map((f: any) => `
+            <div style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #eee;">
+                <div style="width: 44px; height: 44px; border-radius: 8px; background: ${f.gradient || '#ccc'}; flex-shrink: 0;"></div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; font-size: 12px;">${f.name}</div>
+                    <div style="font-size: 10px; color: #666;">${f.desc || 'Премиум ткань'}</div>
+                </div>
+                <div style="font-size: 11px; font-weight: 600;">${(f.properties?.price || 5000).toLocaleString()} ₽</div>
+            </div>
+        `).join('') || '<div style="padding: 20px; text-align: center; color: #999;">Ткани не выбраны</div>';
+        
+        // Таймлайн
+        const timelineHtml = timelineData.map((t, i) => `
+            <div style="display: flex; align-items: center; gap: 12px; padding: 8px 0; ${i < timelineData.length - 1 ? 'border-bottom: 1px dashed #ddd;' : ''}">
+                <div style="width: 24px; height: 24px; border-radius: 50%; background: ${complexity.color}; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;">${i + 1}</div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; font-size: 11px;">${t.stage}</div>
+                    <div style="font-size: 10px; color: #888;">${t.start} — ${t.end}</div>
+                </div>
+                <div style="font-size: 10px; color: #666;">${t.days} дн.</div>
+            </div>
+        `).join('');
+        
+        container.innerHTML = `
+            <!-- HEADER -->
+            <div style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); color: #fff; padding: 30px 40px; display: flex; justify-content: space-between; align-items: flex-end;">
+                <div>
+                    <div style="font-size: 32px; font-weight: 900; letter-spacing: -1px;">ROSKARNIZ</div>
+                    <div style="font-size: 10px; letter-spacing: 3px; opacity: 0.7; margin-top: 4px;">ATELIER & DESIGN STUDIO</div>
+                </div>
+                <div style="text-align: right; font-size: 11px;">
+                    <div style="font-weight: 600;">Концепция интерьера</div>
+                    <div style="opacity: 0.7; margin-top: 2px;">${date}</div>
+                    <div style="opacity: 0.5; margin-top: 2px;">ID: #${orderId}</div>
+                </div>
+            </div>
+            
+            <div style="padding: 30px 40px;">
+                <!-- MOODBOARD SECTION -->
+                <div style="margin-bottom: 30px;">
+                    <div style="font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #000;">Концепция стиля</div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 16px;">
+                        ${stylesHtml}
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
+                    <!-- LEFT: Colors + Fabrics -->
+                    <div>
+                        <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; color: #555;">Палитра</div>
+                        <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px;">
+                            ${colorsHtml}
+                        </div>
+                        
+                        <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; color: #555;">Материалы</div>
+                        <div style="background: #fafafa; border-radius: 12px; padding: 12px;">
+                            ${fabricsHtml}
+                        </div>
+                    </div>
+                    
+                    <!-- RIGHT: Specs + Complexity -->
+                    <div>
+                        <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; color: #555;">Спецификация</div>
+                        <div style="background: #fafafa; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>Карниз:</span> <strong>${selectedCorniceData.value?.name || 'Профильный'}</strong></div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>Тип сборки:</span> <strong>Ручная складка</strong></div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>Коэффициент:</span> <strong>1:2.5</strong></div>
+                            <div style="display: flex; justify-content: space-between;"><span>Подкладка:</span> <strong>Да (Сатин)</strong></div>
+                        </div>
+                        
+                        <div style="background: ${complexity.color}15; border: 1px solid ${complexity.color}40; border-radius: 12px; padding: 16px; text-align: center;">
+                            <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: ${complexity.color};">Сложность проекта</div>
+                            <div style="font-size: 24px; font-weight: 800; color: ${complexity.color}; margin: 8px 0;">${complexity.level}</div>
+                            <div style="font-size: 12px; color: #666;">Срок выполнения: <strong>${complexity.days} дней</strong></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- TIMELINE -->
+                <div style="margin-bottom: 30px;">
+                    <div style="font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #000;">Таймлайн работ</div>
+                    <div style="background: #fafafa; border-radius: 12px; padding: 16px;">
+                        ${timelineHtml}
+                    </div>
+                </div>
+                
+                <!-- ESTIMATE -->
+                <div style="background: #1a1a1a; color: #fff; border-radius: 16px; padding: 24px;">
+                    <div style="font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; opacity: 0.7;">Предварительная смета</div>
+                    
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #333; font-size: 13px;"><span>Материалы и ткани</span><span>${prices.materials.toLocaleString()} ₽</span></div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #333; font-size: 13px;"><span>Карнизы и фурнитура</span><span>${prices.cornices.toLocaleString()} ₽</span></div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #333; font-size: 13px;"><span>Пошив и ВТО</span><span>${prices.work.toLocaleString()} ₽</span></div>
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #333; font-size: 13px;"><span>Монтаж и навеска</span><span>${prices.installation.toLocaleString()} ₽</span></div>
+                    
+                    <div style="display: flex; justify-content: space-between; padding: 16px 0 8px; font-size: 20px; font-weight: 800;"><span>ИТОГО:</span><span>${prices.total.toLocaleString()} ₽</span></div>
+                    <div style="font-size: 11px; opacity: 0.6;">Предоплата ${prices.prepaymentPercent}%: ${prices.deposit.toLocaleString()} ₽</div>
+                </div>
+                
+                <!-- CTA -->
+                <div style="margin-top: 24px; padding: 20px; border: 2px solid #000; display: flex; justify-content: space-between; align-items: center; border-radius: 12px;">
+                    <div>
+                        <div style="font-weight: 700; font-size: 14px;">Готовы начать?</div>
+                        <div style="font-size: 11px; color: #666;">Свяжитесь с нами для вызова замерщика с образцами</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 16px; font-weight: 800;">+7 (495) 000-00-00</div>
+                        <div style="font-size: 11px; color: #666;">hello@roskarniz.ru</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- FOOTER -->
+            <div style="background: #f5f5f5; padding: 16px 40px; display: flex; justify-content: space-between; font-size: 9px; color: #999;">
+                <div>© 2024 Roskarniz Atelier. Все права защищены.</div>
+                <div>г. Москва | roskarniz.ru</div>
+            </div>
+        `;
+        
+        // Ждем загрузки изображений
+        const images = container.getElementsByTagName('img');
+        await Promise.all(Array.from(images).map(img => {
+            if (img.complete) return Promise.resolve();
+            return new Promise(resolve => {
+                img.onload = resolve;
+                img.onerror = resolve;
+            });
+        }));
+        
+        // Небольшая задержка для рендера стилей
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Рендерим в canvas
+        const canvas = await html2canvas(container, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#ffffff',
+            logging: false,
+            // Фикс для oklch и других современных CSS функций
+            onclone: (clonedDoc) => {
+                // Сброс стилей, которые html2canvas не понимает
+                const allElements = clonedDoc.querySelectorAll('*');
+                allElements.forEach((el: Element) => {
+                    const htmlEl = el as HTMLElement;
+                    const computed = window.getComputedStyle(htmlEl);
+                    // Если цвет содержит oklch, заменим на чёрный
+                    if (computed.color.includes('oklch') || computed.color.includes('color(')) {
+                        htmlEl.style.color = '#000000';
+                    }
+                    if (computed.backgroundColor.includes('oklch') || computed.backgroundColor.includes('color(')) {
+                        htmlEl.style.backgroundColor = 'transparent';
+                    }
+                });
+            }
+        });
+        
+        // Создаем PDF
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
         const pdf = new jsPDF({
             orientation: 'portrait',
-            unit: 'mm',
-            format: 'a4'
+            unit: 'px',
+            format: [canvas.width / 2, canvas.height / 2]
         });
         
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
-        const margin = 20;
-        let y = margin;
+        pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width / 2, canvas.height / 2);
+        pdf.save(`Roskarniz_Concept_${orderId}.pdf`);
         
-        // --- Шапка ---
-        pdf.setFillColor(0, 0, 0);
-        pdf.rect(0, 0, pageWidth, 45, 'F');
-        
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(28);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('ROSKARNIZ', margin, 25);
-        
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text('ATELIER & DESIGN STUDIO', margin, 35);
-        
-        // Дата справа
-        const date = new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
-        pdf.text(date, pageWidth - margin, 25, { align: 'right' });
-        pdf.text(`ID: ${Math.floor(Math.random() * 10000)}`, pageWidth - margin, 35, { align: 'right' });
-        
-        y = 60;
-        pdf.setTextColor(0, 0, 0);
-        
-        // --- Заголовок документа ---
-        pdf.setFontSize(18);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Концепция интерьера', margin, y);
-        y += 15;
-        
-        // --- Выбранные стили ---
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Стили:', margin, y);
-        pdf.setFont('helvetica', 'normal');
-        const stylesText = selectedStylesData.value.map((s: any) => s.name).join(', ') || 'Не выбраны';
-        pdf.text(stylesText, margin + 25, y);
-        y += 10;
-        
-        // --- Ткани ---
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Ткани:', margin, y);
-        pdf.setFont('helvetica', 'normal');
-        const fabricsText = selectedFabricsData.value.map((f: any) => f.name).join(', ') || 'Не выбраны';
-        pdf.text(fabricsText, margin + 25, y);
-        y += 10;
-        
-        // --- Цвета ---
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Цвета:', margin, y);
-        pdf.setFont('helvetica', 'normal');
-        const colorsText = selectedColorsData.value.map((c: any) => c.name).join(', ') || 'Не выбраны';
-        pdf.text(colorsText, margin + 25, y);
-        y += 10;
-        
-        // --- Карниз ---
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Карниз:', margin, y);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(selectedCorniceData.value?.name || 'Стандарт', margin + 30, y);
-        y += 20;
-        
-        // --- Линия разделитель ---
-        pdf.setDrawColor(200, 200, 200);
-        pdf.line(margin, y, pageWidth - margin, y);
-        y += 15;
-        
-        // --- Смета ---
-        pdf.setFontSize(14);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Предварительная смета', margin, y);
-        y += 12;
-        
-        pdf.setFontSize(11);
-        pdf.setFont('helvetica', 'normal');
-        
-        const prices = priceBreakdown.value;
-        const priceItems = [
-            ['Материалы и ткани', prices.materials],
-            ['Карнизы и фурнитура', prices.cornices],
-            ['Пошив и ВТО', prices.work],
-            ['Монтаж и навеска', prices.installation]
-        ];
-        
-        priceItems.forEach(([label, price]) => {
-            pdf.text(label as string, margin, y);
-            pdf.text(`${(price as number).toLocaleString('ru-RU')} ₽`, pageWidth - margin, y, { align: 'right' });
-            y += 8;
-        });
-        
-        // Итого
-        y += 5;
-        pdf.setDrawColor(0, 0, 0);
-        pdf.line(margin, y, pageWidth - margin, y);
-        y += 10;
-        
-        pdf.setFontSize(14);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('ИТОГО:', margin, y);
-        pdf.text(`${prices.total.toLocaleString('ru-RU')} ₽`, pageWidth - margin, y, { align: 'right' });
-        y += 12;
-        
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'normal');
-        pdf.setTextColor(100, 100, 100);
-        pdf.text(`Предоплата ${prices.prepaymentPercent}%: ${prices.deposit.toLocaleString('ru-RU')} ₽`, margin, y);
-        y += 20;
-        
-        // --- Контакты ---
-        pdf.setTextColor(0, 0, 0);
-        pdf.setFillColor(245, 245, 245);
-        pdf.rect(margin, y, pageWidth - margin * 2, 25, 'F');
-        
-        pdf.setFontSize(11);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Готовы начать?', margin + 5, y + 10);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text('Свяжитесь с нами для вызова замерщика', margin + 5, y + 18);
-        
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('+7 (495) 000-00-00', pageWidth - margin - 5, y + 10, { align: 'right' });
-        pdf.setFont('helvetica', 'normal');
-        pdf.text('hello@roskarniz.ru', pageWidth - margin - 5, y + 18, { align: 'right' });
-        
-        // --- Футер ---
-        pdf.setFontSize(8);
-        pdf.setTextColor(150, 150, 150);
-        pdf.text('© 2024 Roskarniz Atelier. Все права защищены.', margin, pageHeight - 10);
-        pdf.text('г. Москва', pageWidth - margin, pageHeight - 10, { align: 'right' });
-        
-        // Сохранение
-        pdf.save(`Roskarniz_Concept_${Date.now()}.pdf`);
+        // Удаляем контейнер
+        document.body.removeChild(container);
         
     } catch (e) {
-        console.error(e);
-        alert('Ошибка генерации PDF: ' + e);
+        console.error('PDF generation error:', e);
+        alert('Ошибка генерации PDF. Попробуйте ещё раз.');
     } finally {
         isGeneratingPDF.value = false;
     }
