@@ -1,13 +1,20 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import gsap from 'gsap';
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import CustomCursor from '@/components/CustomCursor.vue';
+import axios from 'axios';
+import { watchDebounced } from '@vueuse/core';
+import MainLayout from '@/Layouts/MainLayout.vue';
+
+defineOptions({ layout: MainLayout });
+
 
 
 // --- Состояние ---
 const showQuiz = ref(true); 
 const currentStep = ref(0);
+const isLoading = ref(false);
 
 // --- Состояние фильтров ---
 const filters = reactive({
@@ -20,124 +27,193 @@ const filters = reactive({
     material: [] as string[]
 });
 
-// --- Логика Квиза (Функционал) ---
+
+// --- Данные квиза ---
 const quizQuestions = [
     {
-        key: 'room',
-        question: "Куда подбираем шторы?",
+        question: 'Какая комната?',
+        filterKey: 'room',
         options: [
-            { label: "Спальня", value: "bedroom", icon: "🛏️" },
-            { label: "Гостиная", value: "living", icon: "🛋️" },
-            { label: "Кухня", value: "kitchen", icon: "🍳" },
-            { label: "Детская", value: "kids", icon: "🧸" }
+            { value: 'living', label: 'Гостиная', icon: '🛋️' },
+            { value: 'bedroom', label: 'Спальня', icon: '🛏️' },
+            { value: 'kitchen', label: 'Кухня', icon: '🍳' },
+            { value: 'office', label: 'Кабинет', icon: '💼' },
+            { value: 'bathroom', label: 'Ванная', icon: '🛁' },
+            { value: 'children', label: 'Детская', icon: '🧸' },
+            { value: 'balcony', label: 'Балкон', icon: '🌅' },
+            { value: 'any', label: 'Любая', icon: '🏠' }
         ]
     },
     {
-        key: 'opacity',
-        question: "Насколько важна темнота?",
+        question: 'Нужна ли светозащита?',
+        filterKey: 'opacity',
         options: [
-            { label: "Полный мрак (Blackout)", value: "blackout", icon: "🌑" },
-            { label: "Сильное затемнение (Dimout)", value: "dimout", icon: "🌘" },
-            { label: "Мягкий свет", value: "light", icon: "🌥️" },
-            { label: "Прозрачный тюль", value: "sheer", icon: "☀️" }
+            { value: 'transparent', label: 'Прозрачные', icon: '☀️' },
+            { value: 'dimout', label: 'Димаут', icon: '🌤️' },
+            { value: 'blackout', label: 'Блэкаут', icon: '🌙' },
+            { value: 'any', label: 'Любая', icon: '✨' }
         ]
     },
     {
-        key: 'style', // Просто для предпочтения, возможно влияет на Материал/Цвет
-        question: "Предпочтительный стиль?",
+        question: 'Предпочитаемый цвет?',
+        filterKey: 'color',
         options: [
-            { label: "Минимализм", value: "minimal", icon: "⬜" },
-            { label: "Современный", value: "modern", icon: "🏙️" },
-            { label: "Классика", value: "classic", icon: "🏛️" },
-            { label: "Лофт", value: "loft", icon: "🧱" }
+            { value: 'white', label: 'Белый', icon: '⚪' },
+            { value: 'beige', label: 'Бежевый', icon: '🟤' },
+            { value: 'gray', label: 'Серый', icon: '🩶' },
+            { value: 'brown', label: 'Коричневый', icon: '🟫' },
+            { value: 'green', label: 'Зеленый', icon: '🟢' },
+            { value: 'blue', label: 'Синий', icon: '🔵' },
+            { value: 'any', label: 'Любой', icon: '🌈' }
+        ]
+    },
+    {
+        question: 'Какой материал?',
+        filterKey: 'material',
+        options: [
+            { value: 'fabric', label: 'Ткань', icon: '🧵' },
+            { value: 'plastic', label: 'Пластик', icon: '🪟' },
+            { value: 'bamboo', label: 'Бамбук', icon: '🎋' },
+            { value: 'wood', label: 'Дерево', icon: '🪵' },
+            { value: 'any', label: 'Любой', icon: '✨' }
         ]
     }
 ];
 
-const selectQuizOption = (questionIndex: number, value: string) => {
-    const question = quizQuestions[questionIndex];
-    
-    // Авто-применение фильтра
-    if (question.key === 'room') {
-        if (!filters.room.includes(value)) filters.room.push(value);
-    } else if (question.key === 'opacity') {
-        if (!filters.opacity.includes(value)) filters.opacity.push(value);
-    }
-    
-    // Следующий шаг
-    if (currentStep.value < quizQuestions.length - 1) {
-        currentStep.value++;
-    } else {
-        finishQuiz();
-    }
-};
-
-const finishQuiz = () => {
-    // Анимация выхода
-    gsap.to('.quiz-overlay', { opacity: 0, duration: 0.5, onComplete: () => { showQuiz.value = false; } });
-};
-
-const skipQuiz = () => {
-    gsap.to('.quiz-overlay', { opacity: 0, duration: 0.5, onComplete: () => { showQuiz.value = false; } });
-};
-
-// --- Моковые данные ---
+// --- Категории ---
 const categories = [
-    { id: 'all', name: 'Все категории' },
-    { id: 'curtains', name: 'Портьеры' },
-    { id: 'tulle', name: 'Тюль' },
-    { id: 'roman', name: 'Римские' },
-    { id: 'electro', name: 'Электрокарнизы' },
+    { id: 'all', name: 'Все товары' },
+    { id: 'roller', name: 'Рулонные шторы' },
+    { id: 'roman', name: 'Римские шторы' },
+    { id: 'pleated', name: 'Плиссе' },
+    { id: 'jalousie', name: 'Жалюзи' },
+    { id: 'vertical', name: 'Вертикальные жалюзи' },
+    { id: 'bamboo', name: 'Бамбуковые шторы' },
+    { id: 'day-night', name: 'День-Ночь' }
 ];
 
+// --- Опции фильтров ---
 const filterOptions = {
     opacity: [
-        { id: 'blackout', name: 'Blackout (100%)' },
-        { id: 'dimout', name: 'Dimout (70-90%)' },
-        { id: 'light', name: 'Светопроницаемые' },
+        { id: 'transparent', name: 'Прозрачные' },
+        { id: 'dimout', name: 'Димаут' },
+        { id: 'blackout', name: 'Блэкаут' }
     ],
     room: [
-        { id: 'bedroom', name: 'Спальня' },
         { id: 'living', name: 'Гостиная' },
+        { id: 'bedroom', name: 'Спальня' },
         { id: 'kitchen', name: 'Кухня' },
-        { id: 'kids', name: 'Детская' },
+        { id: 'office', name: 'Кабинет' },
+        { id: 'bathroom', name: 'Ванная' },
+        { id: 'children', name: 'Детская' },
+        { id: 'balcony', name: 'Балкон' }
     ],
     color: [
-        { id: 'beige', name: 'Бежевый', hex: '#d6d3d1' },
-        { id: 'grey', name: 'Серый', hex: '#52525b' },
-        { id: 'black', name: 'Черный', hex: '#18181b' },
-        { id: 'white', name: 'Белый', hex: '#ffffff' },
-        { id: 'blue', name: 'Синий', hex: '#1e3a8a' },
+        { id: 'white', name: 'Белый', hex: '#FFFFFF' },
+        { id: 'beige', name: 'Бежевый', hex: '#D4C4A8' },
+        { id: 'gray', name: 'Серый', hex: '#808080' },
+        { id: 'brown', name: 'Коричневый', hex: '#8B4513' },
+        { id: 'black', name: 'Черный', hex: '#1a1a1a' },
+        { id: 'green', name: 'Зеленый', hex: '#2E7D32' },
+        { id: 'blue', name: 'Синий', hex: '#1565C0' },
+        { id: 'pink', name: 'Розовый', hex: '#E91E63' },
+        { id: 'terracotta', name: 'Терракот', hex: '#C75B39' },
+        { id: 'olive', name: 'Оливковый', hex: '#808000' }
+    ],
+    material: [
+        { id: 'fabric', name: 'Ткань' },
+        { id: 'plastic', name: 'Пластик' },
+        { id: 'bamboo', name: 'Бамбук' },
+        { id: 'wood', name: 'Дерево' },
+        { id: 'aluminum', name: 'Алюминий' }
     ]
 };
 
-const products = ref([
-    { id: 1, name: 'Moonlight Silence', price: '15 900 ₽', category: 'curtains', opacity: 'blackout', room: 'bedroom', image: '/images/product-1.jpg' },
-    { id: 2, name: 'Morning Breeze', price: '8 500 ₽', category: 'tulle', opacity: 'sheer', room: 'living', image: '/images/product-2.jpg' },
-    { id: 3, name: 'Somfy Glydea Ultra', price: '28 000 ₽', category: 'electro', opacity: 'n/a', room: 'living', image: '/images/product-motor.jpg' },
-    { id: 4, name: 'Velvet Touch', price: '22 000 ₽', category: 'curtains', opacity: 'dimout', room: 'living', image: '/images/product-3.jpg' },
-    { id: 5, name: 'Linen Eco', price: '12 400 ₽', category: 'curtains', opacity: 'light', room: 'kitchen', image: '/images/product-4.jpg' },
-    { id: 6, name: 'Kids Dream', price: '9 900 ₽', category: 'curtains', opacity: 'dimout', room: 'kids', image: '/images/product-1.jpg' },
-]);
+// --- Логика квиза ---
+const selectQuizOption = (step: number, value: string) => {
+    const question = quizQuestions[step];
+    if (value !== 'any') {
+        if (question.filterKey === 'room') {
+            filters.room = [value];
+        } else if (question.filterKey === 'opacity') {
+            filters.opacity = [value];
+        } else if (question.filterKey === 'color') {
+            filters.color = [value];
+        }
+    }
+    
+    if (currentStep.value < quizQuestions.length - 1) {
+        currentStep.value++;
+    } else {
+        showQuiz.value = false;
+    }
+};
 
-// Вычисляемые отфильтрованные товары
-const filteredProducts = computed(() => {
-    return products.value.filter(p => {
-        if (filters.category !== 'all' && p.category !== filters.category) return false;
-        if (filters.opacity.length && !filters.opacity.includes(p.opacity)) return false;
-        if (filters.room.length && !filters.room.includes(p.room)) return false;
-        // Заглушка логики поиска
-        return true;
-    });
+const skipQuiz = () => {
+    showQuiz.value = false;
+};
+
+// --- Очистка фильтров ---
+const clearFilters = () => {
+    filters.search = '';
+    filters.category = 'all';
+    filters.opacity = [];
+    filters.room = [];
+    filters.color = [];
+    filters.material = [];
+};
+
+// --- Проверка активных фильтров ---
+const hasActiveFilters = computed(() => {
+    return filters.search !== '' ||
+           filters.category !== 'all' ||
+           filters.opacity.length > 0 ||
+           filters.room.length > 0 ||
+           filters.color.length > 0 ||
+           filters.material.length > 0;
 });
+
+// --- Товары ---
+const products = ref<any[]>([]);
+
+const fetchProducts = async () => {
+    isLoading.value = true;
+    try {
+        const response = await axios.get('/api/products', { 
+            params: {
+                search: filters.search,
+                category: filters.category,
+                opacity: filters.opacity,
+                room: filters.room,
+                color: filters.color,
+                // priceRange: filters.priceRange
+            }
+        });
+        products.value = response.data;
+    } catch (e) {
+        console.error('Failed to fetch products:', e);
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+// Auto-fetch on filter change with debounce
+watchDebounced(
+    filters,
+    () => { fetchProducts(); },
+    { deep: true, debounce: 300 }
+);
+
+// Initial fetch
+onMounted(() => {
+    fetchProducts();
+});
+
+// Вычисляемые отфильтрованные товары (Now just a pass-through as backend handles filtering)
+const filteredProducts = computed(() => products.value);
 </script>
 
-<script lang="ts">
-import MainLayout from '@/layouts/MainLayout.vue';
-export default {
-    layout: MainLayout
-}
-</script>
+
 
 <template>
     <Head title="Каталог" />
@@ -280,6 +356,30 @@ export default {
                             </button>
                         </div>
                     </div>
+
+                    <!-- Фильтр: Материал -->
+                    <div>
+                        <h3 class="text-xs font-mono text-gray-500 mb-6 uppercase tracking-wider">Материал</h3>
+                        <div class="space-y-3">
+                            <label v-for="opt in filterOptions.material" :key="opt.id" class="flex items-center gap-3 cursor-hover group">
+                                <div class="relative flex items-center">
+                                    <input type="checkbox" :value="opt.id" v-model="filters.material" class="peer appearance-none w-5 h-5 border border-white/20 rounded-md checked:bg-white checked:border-white transition-colors cursor-pointer relative z-10">
+                                    <svg class="w-3 h-3 text-black absolute top-1 left-1 opacity-0 peer-checked:opacity-100 pointer-events-none z-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                </div>
+                                <span class="text-sm text-gray-400 group-hover:text-white transition-colors">{{ opt.name }}</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Кнопка очистки фильтров -->
+                    <button 
+                        v-if="hasActiveFilters"
+                        @click="clearFilters"
+                        class="w-full py-3 px-4 border border-white/20 rounded-xl text-sm text-gray-400 hover:text-white hover:border-white transition-all flex items-center justify-center gap-2 cursor-hover"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        Сбросить фильтры
+                    </button>
 
                 </div>
             </aside>

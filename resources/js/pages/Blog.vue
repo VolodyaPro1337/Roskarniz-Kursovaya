@@ -64,7 +64,7 @@ const filteredArticles = computed(() => {
 </script>
 
 <script lang="ts">
-import MainLayout from '@/layouts/MainLayout.vue';
+import MainLayout from '@/Layouts/MainLayout.vue';
 export default {
     layout: MainLayout
 }

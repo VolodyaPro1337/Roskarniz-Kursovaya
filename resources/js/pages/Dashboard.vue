@@ -1,39 +1,80 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Head, usePage } from '@inertiajs/vue3';
+import { onMounted, ref, computed } from 'vue';
+import MainLayout from '@/Layouts/MainLayout.vue';
 
-import MainLayout from '@/layouts/MainLayout.vue';
+// Auth User
+const page = usePage();
+const user = computed(() => page.props.auth?.user || { name: 'Admin', status: 'Staff' });
 
+// Orders State
+const orders = ref<any[]>([]);
+const isLoading = ref(true);
 
-
-// Mock Data
-const user = {
-    name: 'Александр',
-    status: 'Premium Client',
-    points: 1250
+const fetchOrders = async () => {
+    isLoading.value = true;
+    try {
+        const response = await fetch('/api/admin/orders', {
+            headers: {
+                'Accept': 'application/json',
+                // Add Authorization header if needed, but cookies should handle it for Sanctum/Session
+            }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            orders.value = data.data; // Assuming pagination structure
+        }
+    } catch (e) {
+        console.error('Failed to fetch orders', e);
+    } finally {
+        isLoading.value = false;
+    }
 };
 
-const activeOrder = {
-    id: '#ORDER-2491',
-    status: 'Пошив',
-    progress: 60,
-    items: ['Шторы Blackout (Спалья)', 'Тюль (Гостиная)'],
-    date: '24.01.2026',
-    estimated: '05.02.2026'
+const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('ru-RU', {
+        day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
 };
 
-const moodboards = [
-    { id: 1, name: 'Сканди Гостиная', items: 4, date: '20.01', image: '/images/atelier/style_scandi.png' },
-    { id: 2, name: 'Лофт Кухня', items: 2, date: '18.01', image: '/images/atelier/style_loft.png' },
-    { id: 3, name: 'Спальня Dark', items: 6, date: '15.01', image: '/images/atelier/style_minimal.png' },
-];
+const selectedOrder = ref<any>(null);
 
-const timeline = [
-    { status: 'Оформление', done: true },
-    { status: 'Замер', done: true },
-    { status: 'Пошив', done: false, active: true }, // Current
-    { status: 'Доставка', done: false },
-    { status: 'Монтаж', done: false }
-];
+const openOrderModal = (order: any) => {
+    selectedOrder.value = JSON.parse(JSON.stringify(order)); // Deep copy to avoid mutating table directly
+};
+
+const closeOrderModal = () => {
+    selectedOrder.value = null;
+};
+
+const updateStatus = async (id: number, status: string) => {
+    try {
+        const response = await fetch(`/api/admin/orders/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ status })
+        });
+        
+        if (response.ok) {
+            // Update local list
+            const idx = orders.value.findIndex(o => o.id === id);
+            if (idx !== -1) {
+                orders.value[idx].status = status;
+            }
+        } else {
+            console.error('Failed to update status');
+        }
+    } catch (e) {
+        console.error('Error updating status', e);
+    }
+};
+
+onMounted(() => {
+    fetchOrders();
+});
 </script>
 
 <script lang="ts">
@@ -43,171 +84,159 @@ export default {
 </script>
 
 <template>
-    <Head title="Личный кабинет" />
+    <Head title="Панель администратора" />
 
-    <!-- Padding for fixed Nav -->
     <div class="pt-32 px-4 md:px-12 min-h-screen bg-[#050505] text-white font-sans pb-20">
         
         <div class="max-w-7xl mx-auto">
             <!-- Header -->
-            <div class="flex flex-col md:flex-row justify-between items-end mb-16 border-b border-white/10 pb-8">
+            <div class="flex flex-col md:flex-row justify-between items-end mb-12 border-b border-white/10 pb-8">
                 <div>
-                    <h1 class="text-4xl md:text-6xl font-black mb-2 tracking-tight">
-                        <span class="text-gray-500 font-light">Welcome back,</span> <br>
-                        {{ user.name }}
+                    <h1 class="text-4xl md:text-5xl font-black mb-2 tracking-tight">
+                        Admin Dashboard
                     </h1>
-                    <div class="flex gap-4 items-center text-sm font-mono mt-4">
-                        <span class="px-3 py-1 bg-white/10 rounded-lg border border-white/10 text-gray-300">{{ user.status }}</span>
-                        <span class="text-red-500">⚜ {{ user.points }} pts</span>
-                    </div>
+                    <p class="text-gray-400">Управление заказами и заявками</p>
                 </div>
 
                 <div class="flex gap-4 mt-8 md:mt-0">
-                    <button class="px-6 py-3 border border-white/20 rounded-full hover:bg-white hover:text-black transition-all text-xs font-bold uppercase tracking-wider">
-                        Настройки
-                    </button>
-                    <button class="px-6 py-3 bg-red-600 rounded-full hover:bg-red-500 transition-all text-xs font-bold uppercase tracking-wider">
-                        + Новый проект
-                    </button>
+                    <div class="text-right">
+                        <div class="text-sm font-bold">{{ user.name }}</div>
+                        <div class="text-xs text-green-500"> Online</div>
+                    </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-16">
-                
-                <!-- LEFT COLUMN: Active Order -->
-                <div class="lg:col-span-2 space-y-12">
-                    
-                    <!-- Active Order Card -->
-                    <section>
-                        <h2 class="text-xs font-mono uppercase tracking-widest text-gray-500 mb-6">Активный заказ</h2>
-                        <div class="bg-[#0a0a0a] border border-white/10 rounded-3xl p-8 relative overflow-hidden group">
-                            <!-- Background Graph/Pattern -->
-                            <div class="absolute inset-0 bg-[url('/images/noise.png')] opacity-5 mix-blend-overlay"></div>
-                            <div class="absolute top-0 right-0 w-64 h-64 bg-red-900/10 rounded-full blur-[80px]"></div>
-
-                            <div class="relative z-10">
-                                <div class="flex justify-between items-start mb-8">
-                                    <div>
-                                        <div class="text-3xl font-bold mb-1">{{ activeOrder.id }}</div>
-                                        <div class="text-gray-400 text-sm">Ожидаемая готовность: <span class="text-white">{{ activeOrder.estimated }}</span></div>
-                                    </div>
-                                    <div class="px-3 py-1 bg-red-500/20 text-red-500 border border-red-500/30 rounded-full text-xs font-bold uppercase animate-pulse">
-                                        В работе
-                                    </div>
-                                </div>
-
-                                <!-- Timeline Visual -->
-                                <div class="relative py-8">
-                                    <div class="absolute top-1/2 left-0 w-full h-[2px] bg-white/5 -translate-y-1/2"></div>
-                                    <div class="absolute top-1/2 left-0 h-[2px] bg-red-600 -translate-y-1/2 transition-all duration-1000" :style="{ width: activeOrder.progress + '%' }"></div>
-                                    
-                                    <div class="flex justify-between relative z-10">
-                                        <div v-for="(step, idx) in timeline" :key="idx" class="flex flex-col items-center gap-4">
-                                            <div 
-                                                class="w-4 h-4 rounded-full border-2 transition-all duration-300 bg-[#0a0a0a]"
-                                                :class="[
-                                                    step.done || step.active ? 'border-red-500 bg-red-500 shadow-[0_0_10px_rgba(220,38,38,0.5)]' : 'border-gray-700'
-                                                ]"
-                                            ></div>
-                                            <span 
-                                                class="text-[10px] uppercase font-bold tracking-wider transition-colors"
-                                                :class="step.active ? 'text-white' : 'text-gray-600'"
-                                            >
-                                                {{ step.status }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Items List -->
-                                <div class="mt-8 pt-8 border-t border-white/5">
-                                    <div class="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
-                                        <div v-for="item in activeOrder.items" :key="item" class="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-xl text-sm whitespace-nowrap">
-                                            <span class="w-2 h-2 rounded-full bg-gray-500"></span>
-                                            {{ item }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Saved Moodboards -->
-                    <section>
-                        <div class="flex justify-between items-end mb-6">
-                            <h2 class="text-xs font-mono uppercase tracking-widest text-gray-500">Ваши проекты</h2>
-                            <button class="text-xs text-white border-b border-white hover:text-red-500 hover:border-red-500 transition-colors">Показать все</button>
-                        </div>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div v-for="board in moodboards" :key="board.id" class="group relative aspect-[4/3] rounded-2xl overflow-hidden bg-[#111] border border-white/5 hover:border-white/30 transition-all cursor-pointer">
-                                <img :src="board.image" class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700" alt="">
-                                <div class="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent"></div>
-                                
-                                <div class="absolute bottom-6 left-6 right-6">
-                                    <h3 class="text-xl font-bold mb-1">{{ board.name }}</h3>
-                                    <div class="flex justify-between items-center text-xs text-gray-400">
-                                        <span>{{ board.items }} элементов</span>
-                                        <span>{{ board.date }}</span>
-                                    </div>
-                                </div>
-
-                                <!-- Quick Actions overlay -->
-                                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                                     <button class="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-110 transition-transform" title="Скачать PDF">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                                    </button>
-                                    <button class="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center hover:scale-110 transition-transform" title="Открыть в Ателье">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
+            <!-- Orders Table -->
+            <div class="bg-[#0a0a0a] border border-white/10 rounded-3xl overflow-hidden">
+                <div class="p-6 border-b border-white/10 flex justify-between items-center">
+                    <h2 class="text-lg font-bold">Последние заказы</h2>
+                    <button @click="fetchOrders" class="text-xs text-gray-500 hover:text-white transition-colors">
+                        Обновить
+                    </button>
                 </div>
 
-                <!-- RIGHT COLUMN: Services & Manager -->
-                <div class="space-y-8">
-                     <!-- Personal Manager -->
-                     <div class="bg-white/5 border border-white/10 rounded-2xl p-6">
-                        <div class="flex items-center gap-4 mb-6">
-                            <div class="w-12 h-12 rounded-full bg-gray-700"></div> <!-- Avatar Placeholder -->
-                            <div>
-                                <div class="font-bold">Екатерина</div>
-                                <div class="text-xs text-gray-400">Ваш персональный менеджер</div>
-                            </div>
+                <div v-if="isLoading" class="p-12 text-center text-gray-500">
+                    Загрузка...
+                </div>
+
+                <div v-else-if="orders.length === 0" class="p-12 text-center text-gray-500">
+                    Заказов пока нет.
+                </div>
+
+                <div v-else class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-white/5 text-gray-400 font-mono text-xs uppercase">
+                            <tr>
+                                <th class="px-6 py-4">ID</th>
+                                <th class="px-6 py-4">Клиент</th>
+                                <th class="px-6 py-4">Состав</th>
+                                <th class="px-6 py-4">Сумма</th>
+                                <th class="px-6 py-4">Статус</th>
+                                <th class="px-6 py-4">Дата</th>
+                                <th class="px-6 py-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-white/5">
+                            <tr v-for="order in orders" :key="order.id" class="hover:bg-white/5 transition-colors">
+                                <td class="px-6 py-4 font-mono text-gray-500">#{{ order.id }}</td>
+                                <td class="px-6 py-4">
+                                    <div v-if="order.user_id">ID: {{ order.user_id }}</div>
+                                    <div v-else class="text-gray-400">Гость</div>
+                                    <div v-if="order.guest_info" class="text-xs text-gray-500 mt-1">
+                                        {{ order.guest_info.phone || order.guest_info.email || '-' }}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-wrap gap-2">
+                                        <span v-for="mat in order.materials" :key="mat.id" 
+                                              class="px-2 py-1 bg-white/10 rounded text-xs whitespace-nowrap">
+                                            {{ mat.name }}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 font-bold">{{ Number(order.total_price).toLocaleString('ru-RU') }} ₽</td>
+                                <td class="px-6 py-4">
+                                    <span class="px-3 py-1 rounded-full text-xs font-bold uppercase"
+                                          :class="{
+                                              'bg-blue-500/20 text-blue-500': order.status === 'new',
+                                              'bg-yellow-500/20 text-yellow-500': order.status === 'pending',
+                                              'bg-green-500/20 text-green-500': order.status === 'paid',
+                                              'bg-gray-500/20 text-gray-500': order.status === 'completed'
+                                          }">
+                                        {{ order.status }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-gray-500 text-xs">
+                                    {{ formatDate(order.created_at) }}
+                                </td>
+                                <td class="px-6 py-4">
+                                    <button @click="openOrderModal(order)" class="text-xs border border-white/20 px-3 py-1 rounded hover:bg-white hover:text-black transition-colors">
+                                        View
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Order Details Modal -->
+        <div v-if="selectedOrder" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click="closeOrderModal"></div>
+            <div class="relative bg-[#111] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-8 shadow-2xl">
+                <button @click="closeOrderModal" class="absolute top-4 right-4 text-gray-500 hover:text-white">
+                    ✕
+                </button>
+
+                <h2 class="text-2xl font-bold mb-6">Заказ #{{ selectedOrder.id }}</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                    <div>
+                        <h3 class="text-gray-500 text-xs uppercase mb-2">Клиент</h3>
+                        <div class="bg-white/5 p-4 rounded-xl space-y-2 text-sm">
+                            <div v-if="selectedOrder.guest_info?.name">Name: {{ selectedOrder.guest_info.name }}</div>
+                            <div>Phone: {{ selectedOrder.guest_info?.phone || '-' }}</div>
+                            <div>Email: {{ selectedOrder.guest_info?.email || '-' }}</div>
+                            <div v-if="selectedOrder.guest_info?.address">Address: {{ selectedOrder.guest_info.address }}</div>
                         </div>
-                        <button class="w-full py-3 bg-white text-black font-bold text-xs uppercase rounded-xl hover:bg-gray-200 transition-colors mb-2">
-                             Написать в WhatsApp
-                        </button>
-                        <button class="w-full py-3 border border-white/10 text-white font-bold text-xs uppercase rounded-xl hover:bg-white/10 transition-colors">
-                             Позвонить
-                        </button>
+                    </div>
+                    <div>
+                        <h3 class="text-gray-500 text-xs uppercase mb-2">Статус</h3>
+                        <div class="bg-white/5 p-4 rounded-xl flex gap-2">
+                             <select v-model="selectedOrder.status" @change="updateStatus(selectedOrder.id, selectedOrder.status)"
+                                class="bg-black border border-white/20 text-white text-sm rounded-lg focus:ring-red-500 focus:border-red-500 block w-full p-2.5">
+                                <option value="new">New</option>
+                                <option value="pending">Pending</option>
+                                <option value="paid">Paid</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-8">
+                     <h3 class="text-gray-500 text-xs uppercase mb-2">Материалы</h3>
+                     <div class="bg-white/5 rounded-xl overflow-hidden">
+                        <div v-for="item in selectedOrder.materials" :key="item.id" class="p-4 border-b border-white/5 last:border-0 flex items-center gap-4">
+                            <div v-if="item.image_url" class="w-12 h-12 bg-gray-800 rounded bg-cover bg-center" :style="{ backgroundImage: `url(${item.image_url})` }"></div>
+                            <div class="flex-1">
+                                <div class="font-bold text-sm">{{ item.name }}</div>
+                                <div class="text-xs text-gray-400 capitalize">{{ item.category }}</div>
+                            </div>
+                            <div class="text-sm">{{ Number(item.price).toLocaleString('ru-RU') }} ₽</div>
+                        </div>
                      </div>
-
-                     <!-- Quick Actions -->
-                     <section>
-                        <h3 class="text-xs font-mono uppercase tracking-widest text-gray-500 mb-4">Быстрые действия</h3>
-                        <div class="space-y-2">
-                            <button class="w-full text-left p-4 hover:bg-white/5 rounded-xl transition-colors flex justify-between group">
-                                <span class="text-sm font-medium">Вызвать замерщика</span>
-                                <span class="text-gray-500 group-hover:text-white">→</span>
-                            </button>
-                            <button class="w-full text-left p-4 hover:bg-white/5 rounded-xl transition-colors flex justify-between group">
-                                <span class="text-sm font-medium">Мои адреса</span>
-                                <span class="text-gray-500 group-hover:text-white">→</span>
-                            </button>
-                            <button class="w-full text-left p-4 hover:bg-white/5 rounded-xl transition-colors flex justify-between group">
-                                <span class="text-sm font-medium">История платежей</span>
-                                <span class="text-gray-500 group-hover:text-white">→</span>
-                            </button>
-                        </div>
-                     </section>
+                </div>
+                
+                <div class="flex justify-between items-center border-t border-white/10 pt-6">
+                    <div class="text-gray-400 text-sm">Итоговая сумма</div>
+                    <div class="text-2xl font-bold">{{ Number(selectedOrder.total_price).toLocaleString('ru-RU') }} ₽</div>
                 </div>
 
             </div>
-
         </div>
     </div>
 </template>

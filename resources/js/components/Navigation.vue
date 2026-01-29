@@ -14,9 +14,9 @@ const links = [
 <template>
     <nav class="fixed top-0 left-0 w-full z-50 px-8 py-6 flex justify-between items-center mix-blend-difference text-white">
         <!-- Логотип -->
-        <a href="/" class="text-2xl font-black tracking-tighter cursor-hover hover:scale-105 transition-transform">
+        <Link href="/" class="text-2xl font-black tracking-tighter cursor-hover hover:scale-105 transition-transform">
             ROSKARNIZ
-        </a>
+        </Link>
 
         <!-- Меню для десктопа -->
         <div class="hidden md:flex gap-8 items-center bg-white/10 px-8 py-3 rounded-full backdrop-blur-md border border-white/10">

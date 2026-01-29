@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { onMounted, ref } from 'vue';
 import AuthModal from '@/components/AuthModal.vue';
 import MegaFooter from '@/components/MegaFooter.vue';
 import Navigation from '@/components/Navigation.vue';
@@ -29,8 +29,14 @@ onMounted(() => {
             <slot />
         </main>
         
+        <!-- Debugger -->
+        <!-- <div class="fixed top-0 left-0 bg-red-500 text-white z-[9999] p-2">
+            Component: {{ $page.component }} <br>
+            URL: {{ $page.url }}
+        </div> -->
+
         <!-- Global Footer -->
-        <MegaFooter />
+        <MegaFooter v-if="$page.component !== 'Catalog' && !$page.url.startsWith('/catalog')" />
     </div>
 </template>
 
